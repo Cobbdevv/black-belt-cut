@@ -61,7 +61,7 @@ function viewLogin() {
     '<p class="small">One account for every device. Your log syncs to your phone and every computer you sign in on.</p></div>' +
     '<div class="card"><div class="field"><label for="li-email">Email</label><input class="input" id="li-email" type="email" autocomplete="email" required></div>' +
     '<div class="field"><label for="li-pass">Password</label><input class="input" id="li-pass" type="password" autocomplete="' + (create ? 'new-password' : 'current-password') + '" minlength="6" required></div>' +
-    (S.ui.loginError ? '<p class="small" style="color:var(--accent)" role="alert">' + esc(S.ui.loginError) + '</p>' : '') +
+    (S.ui.loginError ? '<p class="small" style="color:var(--danger)" role="alert">' + esc(S.ui.loginError) + '</p>' : '') +
     '<button class="btn block" type="submit"' + (S.ui.loginBusy ? ' disabled' : '') + '>' + (S.ui.loginBusy ? 'One moment…' : create ? 'Create account' : 'Sign in') + '</button>' +
     '<div class="row" style="justify-content:space-between"><button class="linkish" type="button" data-act="login-mode">' + (create ? 'I already have an account' : 'Create account') + '</button>' +
     (create ? '' : '<button class="linkish" type="button" data-act="forgot">Forgot password?</button>') + '</div></div></form>';

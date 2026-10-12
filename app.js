@@ -145,8 +145,9 @@ function render() {
   renderTop();
   const v = document.getElementById('view');
   if (!S.ui.loaded) return;
-  if (S.ui.auth === 'signed-out') { v.innerHTML = viewLogin(); setTabs(null); return; }
   const p = S.data.profile;
+  v.classList.toggle('single', S.ui.auth === 'signed-out' || !p || !p.onboarded); // forms stay one centred column on desktop
+  if (S.ui.auth === 'signed-out') { v.innerHTML = viewLogin(); setTabs(null); return; }
   if (!p || !p.onboarded) { v.innerHTML = viewOnboarding(); setTabs(null); return; }
   const views = { today: viewToday, train: viewTrain, status: viewStatus, progress: viewProgress, guide: viewGuide };
   v.innerHTML = (views[S.ui.tab] || viewToday)();
@@ -170,7 +171,8 @@ function renderTop() {
   const top = document.getElementById('top');
   const p = S.data.profile;
   const tr = BB.latestTrend(BB.trendSeries(S.data.weights));
-  const brand = '<div class="brand">Black Belt Cut</div>';
+  const dayNo = p && p.onboarded && p.startDate ? BB.daysBetween(p.startDate, today()) + 1 : 0;
+  const brand = '<div class="brand">Black Belt Cut' + (dayNo > 0 ? '<span>Day ' + dayNo + '</span>' : '') + '</div>';
   if (!p || !p.onboarded || tr == null) { top.innerHTML = '<div class="top-row">' + brand + '</div>'; return; }
   const b = BB.beltState(tr, p.startWeight);
   const right = b.next ? b.next.toGo.toFixed(1) + ' kg to ' + b.next.name.toLowerCase() + ' belt'
@@ -273,7 +275,7 @@ function viewToday() {
   const act = BB.activeHabits(p.levers);
   const last = BB.lastActiveDate(S.data);
   const gap = last ? BB.daysBetween(last, t) : 0;
-  const out = [];
+  const out = ['<h1 class="section-title">Today<small>' + BB.parseYmd(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }) + '</small></h1>'];
   if (S.ui.mode === 'local') {
     out.push('<p class="banner">' + (S.ui.syncError ? 'Couldn\'t reach the sync service, so this visit saves on this device only. Reload when you\'re online.'
       : 'Sync is off, so your log stays on this device. Add your Firebase settings to turn on login and sync (README, step 3).') + '</p>');

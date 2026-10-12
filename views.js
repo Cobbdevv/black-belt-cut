@@ -15,7 +15,7 @@ function viewProgress() {
   const stats = [
     ['Since day one', (change <= 0 ? '−' : '+') + fmtKg(Math.abs(change)) + ' kg', 'started ' + BB.niceDate(p.startDate)],
     ['Pace', slope == null ? '–' : (slope <= 0 ? '−' : '+') + Math.abs(slope).toFixed(1) + ' kg/wk', slope == null ? 'needs 10+ days of weigh-ins' : 'last 4 weeks · aim −0.5'],
-    ['Goal date', proj ? BB.parseYmd(proj).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '–', proj ? 'for ' + p.goal + ' kg at this pace' : 'shows once you are losing steadily'],
+    ['Goal date', proj ? BB.parseYmd(proj).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '–', proj ? 'for ' + p.goal + ' kg at this pace' : 'shows once you are losing steadily'],
     ['Workouts', String(S.data.sessions.length), plural(BB.weekStreak(S.data.sessions, t, p.startDate), 'week') + ' streak'],
     ['Good eating days', String(goodDays), plural(BB.habitStreak(S.data.habits, act, t, p.startDate), 'day') + ' streak'],
     ['Cravings beaten', String(urges.beaten), plural(urges.snack, 'planned snack')],
@@ -75,7 +75,7 @@ function chartCard(series, p) {
     grid += '<line class="cg" x1="' + L + '" x2="' + (W - R) + '" y1="' + sy(v).toFixed(1) + '" y2="' + sy(v).toFixed(1) + '"/>' +
       '<text x="' + (L - 6) + '" y="' + (sy(v) + 4).toFixed(1) + '" text-anchor="end">' + v + '</text>';
   }
-  const short = (d) => BB.parseYmd(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const short = (d) => BB.parseYmd(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const xl = '<text x="' + L + '" y="' + (H - 6) + '">' + short(xMin) + '</text><text x="' + (W - R) + '" y="' + (H - 6) + '" text-anchor="end">' + short(t) + '</text>';
   const pace = p.startDate <= t ? '<line class="cp" x1="' + sx(paceFrom).toFixed(1) + '" y1="' + sy(paceAt(p, paceFrom)).toFixed(1) + '" x2="' + sx(t).toFixed(1) + '" y2="' + sy(paceAt(p, t)).toFixed(1) + '"/>' : '';
   const dots = pts.map((x) => '<circle class="cd" cx="' + sx(x.date).toFixed(1) + '" cy="' + sy(x.kg).toFixed(1) + '" r="4"/>').join('');

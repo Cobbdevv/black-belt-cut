@@ -12,7 +12,7 @@
   function weekStart(s) { return addDays(s, -dow(s)); }
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   function niceDate(s) {
-    return parseYmd(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    return parseYmd(s).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   }
 
   // ---------- Belts (by 7-day average weight, kg) ----------
