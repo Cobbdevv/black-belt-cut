@@ -126,6 +126,7 @@ function viewPlan() {
     '<div class="card ex plan-ex"><button type="button" class="plan-thumb" data-act="guide" data-g="' + fin.guide + '" aria-label="How to do ' + esc(fin.name) + '">' + guideStage(fin.guide, 'thumb') + '</button>' +
     '<div class="plan-body"><div class="ex-name">' + fin.name + '</div><p class="ex-cue">' + fin.cue + '</p>' +
     '<p class="small">2-minute rounds with 1 minute of rest. Boxing and kick rounds take turns, and you add a round every 6 workouts.</p>' + howBtn(fin.guide) + '</div></div>' +
+    stretchCard() +
     '<p class="small muted">No equipment needed. If you buy one thing, make it a doorway pull-up bar. It upgrades every pull exercise.</p>';
 }
 ACTIONS.start = (el) => {
@@ -367,6 +368,92 @@ TICKS.push(() => {
   } else { d.round = { phase: 'work', end: Date.now() + WORK_MS }; beep(660, 250, 1); }
   saveDraft();
   if (S.ui.tab === 'train') scheduleRender();
+});
+
+// ---------- Stretching: a guided daily routine, logged by day ----------
+const stretchMins = (d) => ((S.data.stretch || {})[d]) || 0;
+function stretchCard() {
+  const t = today(), ws = BB.weekStart(t);
+  let n = 0, dots = '';
+  for (let i = 0; i < 7; i++) {
+    const d = BB.addDays(ws, i), on = stretchMins(d) > 0;
+    if (on) n++;
+    dots += '<div class="day' + (d === t ? ' today' : '') + '"><span class="dot' + (on ? ' full' : '') + '">' + (on ? ICON_CHECK.replace('stroke-width="3"', 'stroke-width="3" width="16" height="16"') : '') + '</span>' + BB.DAY_NAMES[i] + '</div>';
+  }
+  const done = stretchMins(t) > 0;
+  return '<div class="card"><div class="card-head"><h2>Stretch</h2><span class="small muted">' + n + ' of 7 days this week</span></div>' +
+    '<p class="small">' + (done ? 'Done today. Flexibility comes from stretching most days, not from one long session.' : BB.STRETCH_MINS + ' minutes for your hips and kicks. Every day you can, after a workout or in the evening.') + '</p>' +
+    '<div class="week">' + dots + '</div>' +
+    '<div class="row"><button class="btn grow' + (done ? ' line' : '') + '" type="button" data-act="stretch-start">' + (done ? 'Stretch again' : 'Start stretching') + '</button>' +
+    (done ? '' : '<button class="btn ghost grow" type="button" data-act="stretch-log">Did it without the timer</button>') + '</div></div>';
+}
+function stretchLeft(st) { return st.paused ? st.left : st.end - Date.now(); }
+function stretchSheet() {
+  const st = S.ui.st, steps = BB.stretchSteps();
+  if (st.done) {
+    return '<div class="eyebrow">Stretching</div><h2>Done</h2><p>' + plural(st.mins, 'minute') + ' logged for today. Do it again tomorrow: stretching most days is what changes your range.</p>' +
+      '<button class="btn block" data-act="close" type="button">Done</button>';
+  }
+  const s = steps[st.i], m = guideMove(s.guide);
+  return '<div class="eyebrow">Stretch · ' + (st.i + 1) + ' of ' + steps.length + '</div><h2>' + esc(m ? m.name : s.guide) + (s.side ? ' · ' + s.side : '') + '</h2>' +
+    guideStage(s.guide) + '<div class="timer" id="st-clock">' + clock(stretchLeft(st)) + '</div>' +
+    (m ? '<p class="small" style="text-align:center">' + esc(m.steps[2]) + '</p>' : '') +
+    '<div class="row"><button class="btn ghost grow" type="button" data-act="stretch-pause">' + (st.paused ? 'Resume' : 'Pause') + '</button>' +
+    '<button class="btn line grow" type="button" data-act="stretch-next">' + (st.i + 1 < steps.length ? 'Next' : 'Finish') + '</button></div>' +
+    '<button class="linkish" type="button" data-act="stretch-end" style="align-self:center">Stop here and log it</button>';
+}
+// Time actually spent stretching so far: skipped seconds and pauses don't count.
+function stretchSpent(st) {
+  if (st.end == null) return st.spent || 0;
+  const ms = BB.stretchSteps()[st.i].secs * 1000;
+  return (st.spent || 0) + Math.max(0, Math.min(ms, ms - stretchLeft(st)));
+}
+function stretchGo(i) {
+  const st = S.ui.st, steps = BB.stretchSteps();
+  st.spent = stretchSpent(st);
+  if (i >= steps.length) { st.end = null; stretchFinish(); return; }
+  const otherSide = i > 0 && steps[i - 1].guide === steps[i].guide;
+  st.i = i; st.end = Date.now() + steps[i].secs * 1000; st.paused = false;
+  beep(otherSide ? 520 : 660, 200, otherSide ? 2 : 1);
+  openSheet(stretchSheet());
+}
+function stretchFinish() {
+  const st = S.ui.st;
+  if (!st || st.done) return;
+  const mins = Math.max(1, Math.round(stretchSpent(st) / 60000));
+  S.data.stretch = Object.assign({}, S.data.stretch, { [today()]: stretchMins(today()) + mins });
+  save('stretch');
+  st.done = true; st.mins = mins;
+  beep(880, 200, 3);
+  keepAwake(false);
+  openSheet(stretchSheet());
+  render();
+}
+ACTIONS['stretch-start'] = () => {
+  audioOn(); keepAwake(true);
+  S.ui.st = { i: 0 };
+  stretchGo(0);
+};
+ACTIONS['stretch-next'] = () => { if (S.ui.st && !S.ui.st.done) stretchGo(S.ui.st.i + 1); };
+ACTIONS['stretch-pause'] = () => {
+  const st = S.ui.st;
+  if (!st || st.done) return;
+  if (st.paused) { st.end = Date.now() + st.left; st.paused = false; } else { st.left = Math.max(0, st.end - Date.now()); st.paused = true; }
+  openSheet(stretchSheet());
+};
+ACTIONS['stretch-end'] = () => stretchFinish();
+ACTIONS['stretch-log'] = () => {
+  S.data.stretch = Object.assign({}, S.data.stretch, { [today()]: stretchMins(today()) + BB.STRETCH_MINS });
+  save('stretch');
+  render();
+  toast('Stretching logged for today.');
+};
+TICKS.push(() => {
+  const st = S.ui.st;
+  if (!st || st.done || st.paused) return;
+  const left = st.end - Date.now();
+  if (left > 0) { const c = document.getElementById('st-clock'); if (c) c.textContent = clock(left); return; }
+  stretchGo(st.i + 1);
 });
 
 // ---------- Finish ----------

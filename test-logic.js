@@ -76,6 +76,8 @@ t('progression targets', () => {
   assert.strictEqual(BB.earnedLevelUp('push', 2, [15, 15, 15], 3), false);
   assert.strictEqual(BB.earnedLevelUp('push', 2, [20, 20], 3), false);
   assert.strictEqual(BB.earnedLevelUp('pull', 5, [12, 12, 12], 3), false); // top of ladder
+  assert.strictEqual(BB.stretchSteps().length, 13); // both sides of every one-sided stretch
+  assert.strictEqual(BB.STRETCH_MINS, 9);
   assert.strictEqual(BB.earnedLevelUp('pull', 1, [20, 20], 2), true); // backpack rows lead on to doorframe rows
   assert.strictEqual(BB.nextFinisher([{ kind: 'full', finisher: 'boxing' }]), 'kicks');
   assert.strictEqual(BB.roundsTarget(new Array(12).fill({ kind: 'full' })), 5);

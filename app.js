@@ -4,7 +4,7 @@
 const ACTIONS = {};
 const FORMS = {};
 const TICKS = [];
-function freshData() { return { profile: null, weights: {}, habits: {}, sessions: [], urges: {}, checkins: {}, ranks: {}, quests: {}, notes: {} }; }
+function freshData() { return { profile: null, weights: {}, habits: {}, sessions: [], urges: {}, checkins: {}, ranks: {}, quests: {}, notes: {}, stretch: {} }; }
 const S = {
   data: freshData(),
   ui: { tab: 'today', habitDay: 'today', loaded: false, readOnly: false, mode: 'pending', auth: null, email: '', chartRange: '90', showTable: false, editWeight: false, urge: null, checkin: null, pendingRender: false },
@@ -30,6 +30,7 @@ const DOCS = {
   ranks: { to: (v) => v || {}, from: (b) => b },
   quests: { to: (v) => ({ weeks: v }), from: (b) => b.weeks || {} },
   notes: { to: (v) => ({ days: v }), from: (b) => b.days || {} },
+  stretch: { to: (v) => ({ days: v }), from: (b) => b.days || {} },
 };
 const store = { db: null, timers: {}, writing: {}, dirty: {}, seen: {}, exists: {}, unsubs: [] };
 
@@ -197,7 +198,8 @@ function openSheet(html) {
 function closeSheet() {
   const s = document.getElementById('sheet');
   s.hidden = true; s.innerHTML = '';
-  S.ui.urge = null; S.ui.checkin = null;
+  if (S.ui.st && !S.ui.st.done) keepAwake(false);
+  S.ui.urge = null; S.ui.checkin = null; S.ui.st = null;
   if (S.ui.pendingRender) { S.ui.pendingRender = false; render(); }
 }
 
@@ -291,7 +293,7 @@ function viewToday() {
     out.push('<div class="card quiet" style="padding:0 4px"><p class="small"><b>Yesterday slipped.</b> One off day changes nothing. Never miss twice, so today is the one that counts.</p></div>');
   }
   if (p.why) out.push('<p class="why">' + esc(p.why) + '</p>');
-  out.push(workoutCard(), benchTeaser(), questTeaser(), habitsCard(), weighCard(), cravingCard(), notesCard());
+  out.push(workoutCard(), stretchCard(), benchTeaser(), questTeaser(), habitsCard(), weighCard(), cravingCard(), notesCard());
   if (checkinDue()) {
     out.push('<div class="card"><div class="card-head"><h2>Weekly check-in</h2><span class="small muted">2 minutes</span></div>' +
       '<p class="small">Look back at the week, log your waist if you have a tape measure, and adjust one thing if your weight has stalled.</p>' +
@@ -597,7 +599,7 @@ function weekText() {
   return [
     'My week on Black Belt Cut (' + BB.niceDate(BB.addDays(t, -6)) + ' to ' + BB.niceDate(t) + ')',
     'About me: 18, male, 175 cm. Started at ' + p.startWeight + ' kg on ' + p.startDate + ', goal ' + p.goal + ' kg. Bodyweight training at home 3 times a week, kickboxing and taekwondo background. I eat what my mom cooks, no salads, no calorie counting.',
-    'Workouts: ' + w.sessions + ' (target 3). Good eating days: ' + w.good + '/7.',
+    'Workouts: ' + w.sessions + ' (target 3). Good eating days: ' + w.good + '/7. Stretching: ' + Object.keys(S.data.stretch || {}).filter((d) => d >= BB.addDays(t, -6)).length + '/7 days.',
     'Daily rules: ' + w.act.map((h) => h.title + ' ' + (w.hits[h.key] || 0) + '/7').join('; ') + '.',
     'Cravings: beaten ' + w.urges.beaten + ', planned snack ' + w.urges.snack + ', gave in ' + w.urges.ate + '.',
     '7-day average: ' + (w.trend == null ? 'no data' : w.trend + ' kg') + '. Change vs last week: ' + (w.change7 == null ? 'unknown' : w.change7 + ' kg') +

@@ -210,6 +210,7 @@ function libraryCard() {
     ['Squat', lv('squat')], ['Push', lv('push')], ['Pull', lv('pull')], ['Hips', lv('hinge')], ['Core', lv('core')],
     ['Fighting', ['boxing', 'jab', 'cross', 'hook', 'uppercut', 'speed-punches', 'front-kick', 'roundhouse', 'knee-strike', 'kicks']],
     ['Tests and quests', ['burpee', 'wall-sit']],
+    ['Stretching', BB.STRETCH.map((s) => s.guide)],
   ];
   const item = (id) => { const m = guideMove(id); return m ? '<button type="button" class="lib-item" data-act="guide" data-g="' + id + '">' + guideStage(id, 'thumb') + '<span>' + esc(m.name) + '</span></button>' : ''; };
   return '<div class="card guide-lib"><div class="card-head"><h2>Exercise guides</h2><span class="small muted">tap for the how-to</span></div>' +
@@ -243,7 +244,7 @@ ACTIONS.reset = () => {
   }
   S.ui.confirmReset = false;
   S.data.profile = { onboarded: false, height: 175, age: 18, goal: 75, levels: Object.assign({}, BB.DEFAULT_LEVELS), levers: [] };
-  S.data.weights = {}; S.data.habits = {}; S.data.sessions = []; S.data.urges = {}; S.data.checkins = {}; S.data.ranks = {}; S.data.quests = {}; S.data.notes = {};
+  S.data.weights = {}; S.data.habits = {}; S.data.sessions = []; S.data.urges = {}; S.data.checkins = {}; S.data.ranks = {}; S.data.quests = {}; S.data.notes = {}; S.data.stretch = {};
   Object.keys(DOCS).forEach(save);
   DRAFT = null; saveDraft();
   S.ui.tab = 'today';

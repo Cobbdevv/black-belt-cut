@@ -181,4 +181,27 @@ run('FORMS.weight')(form({ '#w-in': '98,2' }, {}));
 assert.doesNotMatch(sheet(), /Promotion/);
 ok('a corrected starting weight replaces the guessed weigh-in and never fakes a belt promotion');
 
+// 14. Stretching: the guided routine switches sides on the timer, logs real minutes, and shows up in the log
+run(`closeSheet(); S.data.stretch = {}; S.ui.tab = 'today'; render();`);
+assert.match(view(), /Start stretching/); assert.match(view(), /0 of 7 days this week/);
+run(`ACTIONS['stretch-start']()`);
+assert.match(sheet(), /Stretch · 1 of 13/); assert.match(sheet(), /Lying hamstring stretch · Left/); assert.match(sheet(), /data-fg="hamstring-stretch"/); clean(sheet(), 'stretch');
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+assert.match(sheet(), /Lying hamstring stretch · Right/);
+run('closeSheet()');
+assert.strictEqual(run('S.ui.st'), null); assert.strictEqual(run('Object.keys(S.data.stretch).length'), 0); // closing mid-way stops without logging
+run(`ACTIONS['stretch-start']()`);
+run('S.ui.st.end = Date.now() + 45000 - 120000'); // as if two minutes passed on the first stretch
+for (let i = 0; i < 13; i++) run(`ACTIONS['stretch-next']()`);
+assert.match(sheet(), /Done/);
+assert.strictEqual(run('S.data.stretch[today()]'), 1); // only the time really spent counts, not the skipped stretches
+run('closeSheet()');
+assert.match(view(), /1 of 7 days this week/); assert.match(view(), /Stretch again/);
+run(`ACTIONS['stretch-log']()`);
+assert.strictEqual(run('S.data.stretch[today()]'), 1 + 9);
+const slog = run('LOGBOOK.text(S.data, { today: today(), days: 7 })');
+assert.ok(slog.includes('## Stretching') && slog.includes('Stretched on 1 of'), 'stretching in the log');
+run(`S.ui.tab = 'train'; render();`); assert.match(view(), /Stretch again/);
+ok('stretching: guided routine with side switches, honest minutes, closing stops it, and it lands in the log');
+
 console.log('all app tests passed');

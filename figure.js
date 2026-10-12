@@ -263,7 +263,12 @@
     const w = J.arms[0].end;
     return '<path class="fg-pack" d="M' + r1(w[0] - 6) + ' ' + r1(-(w[1] - 2)) + 'h12v15h-12Z"/><path class="fg-prop" d="M' + r1(w[0] - 3) + ' ' + r1(-(w[1] - 2)) + 'L' + r1(w[0]) + ' ' + r1(-w[1]) + 'L' + r1(w[0] + 3) + ' ' + r1(-(w[1] - 2)) + '"/>';
   }
-  const carried = (move, J) => (move.pack ? backpack(J) : '') + (move.held ? heldBag(J) : '');
+  // A towel or belt from the near hand around the near foot.
+  function strap(J) {
+    const w = J.arms[0].end, a = J.legs[0].end, t = J.legs[0].tip;
+    return '<path class="fg-strap" d="' + pathOf([w, mul(add(a, t), 0.5)]) + '"/>';
+  }
+  const carried = (move, J) => (move.pack ? backpack(J) : '') + (move.held ? heldBag(J) : '') + (move.strap ? strap(J) : '');
   function crossBadge(move) {
     const x = move.view[2] - 8, y = -(move.view[3] - 8);
     return '<g class="fg-x"><circle cx="' + x + '" cy="' + y + '" r="5.5"/><path d="M' + (x - 2.4) + ' ' + (y - 2.4) + 'l4.8 4.8M' + (x + 2.4) + ' ' + (y - 2.4) + 'l-4.8 4.8"/></g>';

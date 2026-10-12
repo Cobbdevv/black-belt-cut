@@ -191,6 +191,23 @@
     { guide: 'jumping-jacks', secs: 40, cue: 'or march on the spot' },
     { guide: 'boxing', secs: 70, cue: 'easy and loose' },
   ];
+  // Daily stretching, 9 minutes. 45 s per side every day puts each muscle past 5 minutes a week, where the bigger
+  // range-of-motion gains show up; the slow leg raises turn that range into kick height.
+  const STRETCH = [
+    { guide: 'hamstring-stretch', secs: 45, sides: true },
+    { guide: 'hip-flexor-stretch', secs: 45, sides: true },
+    { guide: 'glute-stretch', secs: 45, sides: true },
+    { guide: 'side-lunge-stretch', secs: 45, sides: true },
+    { guide: 'butterfly', secs: 60 },
+    { guide: 'front-leg-raise', secs: 30, sides: true },
+    { guide: 'side-leg-raise', secs: 30, sides: true },
+  ];
+  function stretchSteps() {
+    const out = [];
+    STRETCH.forEach((s) => { if (s.sides) out.push(Object.assign({ side: 'Left' }, s), Object.assign({ side: 'Right' }, s)); else out.push(s); });
+    return out;
+  }
+  const STRETCH_MINS = Math.round(stretchSteps().reduce((a, s) => a + s.secs, 0) / 60);
   function levelDef(pattern, level) {
     const lv = LADDERS[pattern].levels;
     return lv[Math.max(1, Math.min(lv.length, level)) - 1];
@@ -243,7 +260,7 @@
     trendSeries, latestTrend, slopePerWeek, projectGoalDate, isStalled,
     BASE_HABITS, LEVERS, activeHabits, goodDayNeed, dayDone, isGoodDay, habitStreak, missedYesterday,
     sessionsInWeek, weekStreak,
-    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, WARMUP, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
+    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, WARMUP, STRETCH, stretchSteps, STRETCH_MINS, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
     lastActiveDate,
   };
   root.BB = BB;

@@ -135,6 +135,15 @@
     else act.forEach((h) => { let hit = 0; for (let d = from; d <= t; d = BB.addDays(d, 1)) if (((data.habits || {})[d] || {})[h.key]) hit++; line('- ' + h.title + ': ' + hit + ' of ' + span + ' days'); });
     line();
 
+    const stretchDays = Object.keys(data.stretch || {}).filter(inRange).sort();
+    line('## Stretching (' + BB.STRETCH_MINS + '-minute routine: hamstrings, hip flexors, glutes, inner thighs, leg raises)');
+    if (!stretchDays.length) line('- None logged.');
+    else {
+      line('- Stretched on ' + stretchDays.length + ' of ' + span + (span === 1 ? ' day' : ' days') + ', ' + stretchDays.reduce((a, d) => a + (data.stretch[d] || 0), 0) + ' minutes in total.');
+      if (span <= 45) line('- Days: ' + stretchDays.map((d) => shortDay(d) + ' (' + data.stretch[d] + ' min)').join(', ') + '.');
+    }
+    line();
+
     const urgeDays = Object.keys(data.urges || {}).filter(inRange).sort();
     line('## Cravings (I tap the craving button, then wait 10 minutes)');
     if (!urgeDays.length) line('- None logged.');

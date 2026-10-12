@@ -45,6 +45,7 @@ const want = [];
 BB.ORDER.forEach((pat) => BB.LADDERS[pat].levels.forEach((l) => want.push(['ladder ' + pat + ' ' + l.name, l.guide])));
 Object.keys(BB.FINISHERS).forEach((k) => want.push(['finisher ' + k, BB.FINISHERS[k].guide]));
 BB.WARMUP.forEach((w) => want.push(['warm-up', w.guide]));
+BB.STRETCH.forEach((s) => want.push(['stretch', s.guide]));
 RK.TEST_KEYS.forEach((k) => want.push(['test ' + k, RK.TESTS[k].guide]));
 RK.TECHNIQUES.filter((t) => t.guide).forEach((t) => want.push(['technique ' + t.name, t.guide]));
 const d = { profile: { startDate: '2026-10-12', levers: [] }, habits: {}, sessions: [], quests: {}, ranks: {} };
