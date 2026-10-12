@@ -188,7 +188,8 @@ function viewGuide() {
     '<div class="field"><label for="st-why">Your why</label><textarea class="input" id="st-why">' + esc(p.why || '') + '</textarea></div>' +
     '<div class="field"><label>Goal weight</label><div class="chips" data-group="goal">' + [75, 72, 70].map((g) => '<button type="button" class="chip' + (p.goal === g ? ' on' : '') + '" data-act="pick" data-v="' + g + '">' + g + ' kg</button>').join('') + '</div></div>' +
     '<div class="field"><label>Training days</label><div class="chips" data-group="days" data-multi="1">' + BB.DAY_NAMES.map((d, i) => '<button type="button" class="chip' + (days.includes(i) ? ' on' : '') + '" data-act="pick" data-v="' + i + '">' + d + '</button>').join('') + '</div></div>' +
-    '<div class="field"><label for="st-start">Starting weight (kg)</label><input class="input" id="st-start" inputmode="decimal" autocomplete="off" value="' + esc(p.startWeight) + '"></div>' +
+    '<div class="field"><label for="st-start">Starting weight (kg)</label><input class="input" id="st-start" inputmode="decimal" autocomplete="off" value="' + esc(p.startWeight) + '">' +
+    '<p class="small muted">Guessed it on day one? Enter your first real weigh-in here. It replaces the guess in your weigh-in log too.</p></div>' +
     '<button class="btn" type="submit">Save settings</button></form>' +
     '<div class="card"><h2>Account and backup</h2>' +
     '<p class="small">' + (S.ui.auth === 'signed-in' ? 'Signed in as <b>' + esc(S.ui.email) + '</b>. Your log syncs to every device you sign in on, and keeps working offline.'
@@ -220,7 +221,15 @@ FORMS.settings = (f) => {
   const days = Array.from(f.querySelectorAll('[data-group="days"] .chip.on')).map((b) => Number(b.dataset.v));
   const start = parseKg(f.querySelector('#st-start').value);
   if (!start || start < 40 || start > 250) { toast('Enter your starting weight in kg, like 101.5'); return; }
+  const oldStart = p.startWeight;
   Object.assign(p, { why: f.querySelector('#st-why').value.trim(), goal: goalBtn ? Number(goalBtn.dataset.v) : p.goal, trainDays: days.length ? days : p.trainDays, startWeight: start });
+  // The day-one weigh-in is the starting weight. Fixing a guessed start fixes that entry too, and moves the belt baseline so it can't fake a promotion.
+  if (start !== oldStart && S.data.weights[p.startDate] === oldStart) {
+    S.data.weights[p.startDate] = start;
+    const b = BB.beltState(BB.latestTrend(BB.trendSeries(S.data.weights)), start);
+    p.seenBelt = b.index; p.seenStripes = b.index * 10 + b.stripes;
+    save('weights');
+  }
   save('profile');
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   render();

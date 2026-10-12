@@ -171,4 +171,14 @@ run(`S.ui.tab = 'progress'; render();`); assert.match(view(), /Copy for Claude/)
 run(`S.ui.tab = 'guide'; render();`); assert.match(view(), /Exercise guides/); clean(view(), 'guide');
 ok('notes land in the log; the Claude log covers profile, workouts with notes, benchmarks and notes');
 
+// 13. Fixing a guessed starting weight fixes the day-one weigh-in, and a real weigh-in after it is no fake promotion
+run(`closeSheet(); S.data.profile.startDate = today(); S.data.profile.startWeight = 100; S.data.weights = { [today()]: 100 }; S.data.profile.seenBelt = 0; S.data.profile.seenStripes = 0; S.ui.tab = 'guide'; render();`);
+assert.match(view(), /It replaces the guess/);
+run('FORMS.settings')(form({ '#st-start': '98,2', '#st-why': 'Fit into my old dobok' }, {}));
+assert.strictEqual(run('S.data.profile.startWeight'), 98.2);
+assert.strictEqual(run('S.data.weights[today()]'), 98.2);
+run('FORMS.weight')(form({ '#w-in': '98,2' }, {}));
+assert.doesNotMatch(sheet(), /Promotion/);
+ok('a corrected starting weight replaces the guessed weigh-in and never fakes a belt promotion');
+
 console.log('all app tests passed');
