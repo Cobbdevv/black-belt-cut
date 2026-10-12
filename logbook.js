@@ -32,7 +32,10 @@
       const def = BB.levelDef(pat, e.lvl);
       parts.push(BB.LADDERS[pat].label + ' L' + e.lvl + ' ' + def.name + ' ' + e.reps.join('/') + (def.unit === 's' ? ' s' : ''));
     });
-    if (s.rounds) parts.push(s.rounds + ' ' + (BB.FINISHERS[s.finisher] ? BB.FINISHERS[s.finisher].name.toLowerCase() : 'rounds'));
+    if (s.rounds) {
+      const name = BB.FINISHERS[s.finisher] ? BB.FINISHERS[s.finisher].name.toLowerCase() : 'rounds';
+      parts.push(s.rounds + ' ' + (s.rounds === 1 ? name.replace(/s$/, '') : name));
+    }
     if (s.kind === 'full' && s.warmup === false) parts.push('no warm-up');
     if (s.note) parts.push('note: ' + quote(s.note));
     return '- ' + parts.join(' · ');
@@ -99,7 +102,7 @@
     }
 
     const sessions = (data.sessions || []).filter((s) => inRange(s.date));
-    line('## Workouts (' + sessions.length + ' in ' + span + ' days, target 3 a week)');
+    line('## Workouts (' + sessions.length + ' in ' + span + (span === 1 ? ' day' : ' days') + ', target 3 a week)');
     if (sessions.length) sessions.forEach((s) => line(sessionLine(s)));
     else line('- None logged.');
     line();

@@ -256,8 +256,14 @@
         body = textMarkup(at, c.text, c.anchor);
       }
       return '<g opacity="' + r1(w) + '">' + body + '</g>';
-    }).join('') + (move.pack ? backpack(J) : '');
+    }).join('') + carried(move, J);
   }
+  // A bag carried in the near hand: hangs straight down from the wrist.
+  function heldBag(J) {
+    const w = J.arms[0].end;
+    return '<path class="fg-pack" d="M' + r1(w[0] - 6) + ' ' + r1(-(w[1] - 2)) + 'h12v15h-12Z"/><path class="fg-prop" d="M' + r1(w[0] - 3) + ' ' + r1(-(w[1] - 2)) + 'L' + r1(w[0]) + ' ' + r1(-w[1]) + 'L' + r1(w[0] + 3) + ' ' + r1(-(w[1] - 2)) + '"/>';
+  }
+  const carried = (move, J) => (move.pack ? backpack(J) : '') + (move.held ? heldBag(J) : '');
   function crossBadge(move) {
     const x = move.view[2] - 8, y = -(move.view[3] - 8);
     return '<g class="fg-x"><circle cx="' + x + '" cy="' + y + '" r="5.5"/><path d="M' + (x - 2.4) + ' ' + (y - 2.4) + 'l4.8 4.8M' + (x + 2.4) + ' ' + (y - 2.4) + 'l-4.8 4.8"/></g>';
@@ -268,7 +274,7 @@
     opts = opts || {};
     const p = poseAt(move, t || 0), J = solve(p);
     return '<svg class="fg' + (opts.cls ? ' ' + opts.cls : '') + '" viewBox="' + viewBox(move) + '" role="img" aria-label="' + (opts.label || move.name) + '">' +
-      '<g class="fg-props">' + propMarkup(move) + '</g><g class="fg-cues">' + (opts.cues === false ? (move.pack ? backpack(J) : '') : cuesMarkup(move, J, t || 0, p)) + '</g>' +
+      '<g class="fg-props">' + propMarkup(move) + '</g><g class="fg-cues">' + (opts.cues === false ? carried(move, J) : cuesMarkup(move, J, t || 0, p)) + '</g>' +
       '<g class="fg-fig">' + figureMarkup(J, p) + '</g>' + (opts.cross ? crossBadge(move) : '') + '</svg>';
   }
 

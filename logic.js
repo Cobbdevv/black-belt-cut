@@ -153,12 +153,13 @@
     ] },
     push: { label: 'Push', levels: [
       { name: 'Counter push-up', guide: 'counter-pushup', cue: 'Hands on the kitchen counter, body in one straight line.', min: 8, max: 15 },
-      { name: 'Low incline push-up', guide: 'incline-pushup', cue: 'Hands on a stair or a sturdy low table. Chest to the edge.', min: 8, max: 15 },
+      { name: 'Knee push-up', guide: 'knee-pushup', cue: 'Knees down, body straight from knees to head, elbows tucked about 45°.', min: 8, max: 20 },
       { name: 'Push-up', guide: 'pushup', cue: 'From the floor. Elbows about 45° from your body.', min: 5, max: 12 },
       { name: 'Slow push-up', guide: 'slow-pushup', cue: '3 seconds down, 1 second up.', min: 5, max: 12 },
       { name: 'Feet-up push-up', guide: 'decline-pushup', cue: 'Feet on a chair or the couch.', min: 5, max: 12 },
     ] },
     pull: { label: 'Pull', levels: [
+      { name: 'Backpack row', guide: 'backpack-row', cue: 'Bent over with a flat back, pull a backpack full of books to your stomach.', min: 10, max: 20 },
       { name: 'Doorframe row', guide: 'door-row', cue: 'Grip both sides of a doorframe, feet close to it, lean back on straight arms, pull your chest to the frame.', min: 10, max: 15 },
       { name: 'Deep doorframe row', guide: 'deep-door-row', cue: 'Same row with your feet closer, so you lean back further.', min: 10, max: 15 },
       { name: 'One-arm doorframe row', guide: 'one-arm-row', cue: 'One hand on the frame, pull without twisting.', min: 8, max: 12, side: 'arm' },

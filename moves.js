@@ -148,7 +148,7 @@
     name: 'Push-up', view: [-82, -8, 32, 60], dur: 2.4, props: [FLOOR],
     keys: [{ t: 0, p: PU.top, f: 'Arms straight' }, { t: 1.1, p: PU.bottom, f: 'Chest a fist off the floor' }, { t: 1.9, p: PU.top }],
     tempo: [[0, 1.1, 'Down'], [1.1, 1.9, 'Up']],
-    cues: [lineCue, { from: 1.0, to: 1.5, text: 'FIST HEIGHT', at: 'chest', off: [8, -2] }],
+    cues: [lineCue, { from: 1.0, to: 1.5, text: 'FIST HEIGHT', at: [30, 24], anchor: 'end' }],
     wrong: { p: set(PU.top, { hip: [onToes(floorT, floorTopBeta).hip[0], onToes(floorT, floorTopBeta).hip[1] - 10], torso: floorTopBeta + 16 }), text: 'Hips sagging' },
     steps: PU_STEPS, avoid: 'Hips sagging, or your head dropping first.',
   });
@@ -170,15 +170,29 @@
     steps: ['Hands on the counter edge, a little wider than your shoulders.', 'Walk your feet back until your body is one straight line.', 'Lower your chest to the edge, elbows about 45° from your body.', 'Push the counter away until your arms are straight.'],
     avoid: 'Hips sagging or sticking up.',
   });
-  const stepW = [-1, 27], stepT = [-68, 0];
-  const IU = pushSet(stepT, stepW, betaForReach(stepT, stepW, ARM - 0.8), betaForReach(stepT, stepW, 12.5));
-  add('incline-pushup', {
-    name: 'Low incline push-up', view: [-80, -8, 40, 72], dur: 2.4, props: [FLOOR, box(0, 40, 25)],
-    keys: [{ t: 0, p: IU.top, f: 'Arms straight' }, { t: 1.1, p: IU.bottom, f: 'Chest to the edge' }, { t: 1.9, p: IU.top }],
-    tempo: [[0, 1.1, 'Down'], [1.1, 1.9, 'Up']],
-    cues: [lineCue],
-    steps: ['Hands on a stair or a sturdy low table, a little wider than your shoulders.', 'Feet back until your body is one straight line.', 'Lower your chest to the edge, elbows about 45°.', 'Push away until your arms are straight.'],
-    avoid: 'Hips sagging or sticking up.',
+  // Straight body from the knees, which rest on the floor at K, shins flat behind.
+  function onKnees(K, beta) {
+    const hip = at(K, beta, B.thigh - 0.2);
+    return { hip, torso: beta, feet: two(at(K, 178, B.shin - 0.2)), toes: two(182), neck: at(hip, beta, B.torso) };
+  }
+  const KN = [-40, 4.6];
+  const knBeta = (y) => solveFor((b) => onKnees(KN, b).neck[1], y, 0, 70);
+  const knTopB = knBeta(33.2), knTopNeck = onKnees(KN, knTopB).neck;
+  const knHands = two([knTopNeck[0] - 3, 2]);
+  const knPose = (b) => { const p = onKnees(KN, b); delete p.neck; return Object.assign(p, { hands: knHands, palms: PALMS, elbows: PUSH_ELBOWS }); };
+  const knTop = knPose(knTopB), knBottom = knPose(knBeta(12.8));
+  const knPikeHip = at(KN, knTopB + 24, B.thigh - 0.2);
+  add('knee-pushup', {
+    name: 'Knee push-up', view: [-80, -8, 32, 60], dur: 2.8, props: [FLOOR],
+    keys: [{ t: 0, p: knTop, f: 'Knees down, arms straight' }, { t: 1.5, p: knBottom, f: 'Chest a fist off the floor' }, { t: 2.4, p: knTop }],
+    tempo: [[0, 1.5, 'Down · 1.5 s'], [1.5, 2.4, 'Up']],
+    cues: [
+      { always: true, line: ['knN', 'neck'], text: 'STRAIGHT FROM KNEES TO HEAD', ext: 5 },
+      { from: 0.3, to: 1.5, text: 'ELBOWS TUCKED ABOUT 45°', at: [-8, 50], anchor: 'middle' },
+    ],
+    wrong: { p: set(knTop, { hip: knPikeHip, torso: Math.atan2(knTopNeck[1] - knPikeHip[1], knTopNeck[0] - knPikeHip[0]) / DEG }), text: 'Hips piking up' },
+    steps: ['Knees on the floor behind you, hands flat under your shoulders, fingers spread.', 'Lean forward until you are one straight line from knees to head.', 'Take 1.5 seconds to lower your chest to a fist\'s height, elbows tucked about 45° from your body.', 'Push back up, stopping just short of snapping your elbows straight.'],
+    avoid: 'Elbows flaring out to the sides, or your hips bending so your bum sticks up.',
   });
   const declT = [-66, 26];
   const declTop = betaForHeight(declT, 33.2);
@@ -194,6 +208,18 @@
   });
 
   // ---------- Pull ladder ----------
+  const BRW_HIP = [-6, 44], BRW_T = 35, brwNeck = at(BRW_HIP, BRW_T, B.torso);
+  const brwBase = { hip: BRW_HIP, torso: BRW_T, head: 8, feet: two([4, B.ankle]), toes: two(FLAT) };
+  const brwDown = set(brwBase, { hands: two([brwNeck[0] + 1.5, brwNeck[1] - 30.5]) });
+  const brwUp = set(brwBase, { hands: two(at(at(BRW_HIP, BRW_T, 11), BRW_T - 90, 7)) });
+  add('backpack-row', {
+    name: 'Backpack row', view: [-46, -8, 58, 96], dur: 3.9, props: [FLOOR], held: true,
+    keys: [{ t: 0, p: brwDown, f: 'Hinge forward, arms long' }, { t: 1.0, p: brwUp, f: 'Pull to your stomach' }, { t: 1.5, p: brwUp }, { t: 3.5, p: brwDown }],
+    tempo: [[0, 1, 'Pull'], [1, 1.5, 'Squeeze'], [1.5, 3.5, 'Lower · 2 s']],
+    cues: [{ always: true, line: ['hip', 'neck'], text: 'FLAT BACK', ext: 4 }, { from: 0.15, to: 1.5, text: 'ELBOWS BACK', at: [30, 84], anchor: 'middle' }],
+    steps: ['Fill a backpack with books and hold it by the top handle or the straps with both hands.', 'Feet hip-width, knees soft. Push your hips back until your chest leans forward, back flat.', 'Pull the bag to your stomach, elbows going back, and squeeze your shoulder blades together.', 'Take 2 seconds to lower it until your arms are straight. Keep your back flat the whole time.'],
+    avoid: 'Rounding your back, or jerking the bag up with your hips.',
+  });
   const GRIP = [31, 62];
   function rowSet(A, lean, pulled, hands) {
     const top = leanBack(A, thetaForReach(A, GRIP, lean)), bot = leanBack(A, thetaForReach(A, GRIP, pulled));
