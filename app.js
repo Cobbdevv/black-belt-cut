@@ -4,7 +4,7 @@
 const ACTIONS = {};
 const FORMS = {};
 const TICKS = [];
-function freshData() { return { profile: null, weights: {}, habits: {}, sessions: [], urges: {}, checkins: {}, ranks: {}, quests: {} }; }
+function freshData() { return { profile: null, weights: {}, habits: {}, sessions: [], urges: {}, checkins: {}, ranks: {}, quests: {}, notes: {} }; }
 const S = {
   data: freshData(),
   ui: { tab: 'today', habitDay: 'today', loaded: false, readOnly: false, mode: 'pending', auth: null, email: '', chartRange: '90', showTable: false, editWeight: false, urge: null, checkin: null, pendingRender: false },
@@ -29,6 +29,7 @@ const DOCS = {
   checkins: { to: (v) => ({ weeks: v }), from: (b) => b.weeks || {} },
   ranks: { to: (v) => v || {}, from: (b) => b },
   quests: { to: (v) => ({ weeks: v }), from: (b) => b.weeks || {} },
+  notes: { to: (v) => ({ days: v }), from: (b) => b.days || {} },
 };
 const store = { db: null, timers: {}, writing: {}, dirty: {}, seen: {}, exists: {}, unsubs: [] };
 
@@ -290,7 +291,7 @@ function viewToday() {
     out.push('<div class="card quiet" style="padding:0 4px"><p class="small"><b>Yesterday slipped.</b> One off day changes nothing. Never miss twice, so today is the one that counts.</p></div>');
   }
   if (p.why) out.push('<p class="why">' + esc(p.why) + '</p>');
-  out.push(workoutCard(), questTeaser(), habitsCard(), weighCard(), cravingCard());
+  out.push(workoutCard(), benchTeaser(), questTeaser(), habitsCard(), weighCard(), cravingCard(), notesCard());
   if (checkinDue()) {
     out.push('<div class="card"><div class="card-head"><h2>Weekly check-in</h2><span class="small muted">2 minutes</span></div>' +
       '<p class="small">Look back at the week, log your waist if you have a tape measure, and adjust one thing if your weight has stalled.</p>' +
@@ -470,6 +471,26 @@ TICKS.push(() => {
   if (el) el.textContent = Math.floor(left / 60000) + ':' + String(Math.floor(left / 1000) % 60).padStart(2, '0');
   if (!left) { u.step = 'decide'; openSheet('<div class="eyebrow">Ten minutes done</div>' + urgeSheet().replace('<div class="eyebrow">Your call</div>', '')); }
 });
+
+// ---------- Notes: anything worth remembering, kept with the date and time for the log ----------
+function notesCard() {
+  const list = (S.data.notes || {})[today()] || [];
+  return '<form class="card" data-form="note"><div class="card-head"><h2>Training log</h2><span class="small muted">' + (list.length ? plural(list.length, 'note') + ' today' : 'Optional') + '</span></div>' +
+    (list.length ? '<ul class="notes">' + list.map((n) => '<li><span class="muted">' + esc(n.t) + '</span> ' + esc(n.text) + '</li>').join('') + '</ul>' : '') +
+    '<textarea class="input" id="note-in" placeholder="Sleep, food, mood, pain, a win. Anything you would want Claude to know."></textarea>' +
+    '<div class="row"><button class="btn line grow" type="submit">Add to log</button></div></form>';
+}
+FORMS.note = (f) => {
+  const text = f.querySelector('#note-in').value.trim().slice(0, 1000);
+  if (!text) { toast('Write something first.'); return; }
+  const d = new Date(), t = today();
+  const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  S.data.notes = Object.assign({}, S.data.notes, { [t]: ((S.data.notes || {})[t] || []).concat({ t: time, text }) });
+  save('notes');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  render();
+  toast('Added to your log.');
+};
 
 // ---------- Weekly check-in ----------
 function lastCheckinDate() {

@@ -10,16 +10,16 @@
 
   // Thresholds: the minimum result for each of the 21 ranks. C is roughly average for an 18-25-year-old man, A is athletic, S is elite.
   const TESTS = {
-    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'push-ups',
+    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'push-ups', guide: 'pushup',
       how: 'One set, no rest at the top. Chest to a fist\'s height from the floor, arms fully straight at the top. Stop when your form breaks.',
       th: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38, 42, 48, 55, 62, 72] },
-    dur: { code: 'DUR', name: 'Durability', test: 'Max plank hold', unit: 's',
+    dur: { code: 'DUR', name: 'Durability', test: 'Max plank hold', unit: 's', guide: 'plank',
       how: 'Forearm plank, body in one straight line. Stop the clock when your hips sag or rise. A strong brace is what absorbs hits.',
       th: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 115, 130, 145, 160, 180, 200, 225, 255, 290, 360] },
-    spd: { code: 'SPD', name: 'Speed', test: 'Kicks in 30 seconds', unit: 'kicks',
+    spd: { code: 'SPD', name: 'Speed', test: 'Kicks in 30 seconds', unit: 'kicks', guide: 'roundhouse',
       how: 'Roundhouse kicks to at least waist height, alternating legs, each one retracted back to stance. Count out loud or film it.',
       th: [0, 6, 10, 14, 17, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 45, 48, 52, 56, 60, 66] },
-    end: { code: 'END', name: 'Endurance', test: 'Burpees in 3 minutes', unit: 'burpees',
+    end: { code: 'END', name: 'Endurance', test: 'Burpees in 3 minutes', unit: 'burpees', guide: 'burpee',
       how: 'Squat, hands down, back to a plank, back up, stand tall. Step back instead of jumping if your knees or wrists need it, but use the same style every trial.',
       th: [0, 5, 10, 14, 18, 21, 24, 27, 30, 34, 38, 42, 46, 50, 54, 58, 62, 66, 70, 75, 82] },
   };
@@ -34,6 +34,7 @@
   const POT_BASE = 16; // A: 18 years old, 2.5 years of martial arts, and a lot of room above your current numbers.
 
   // 20 techniques, easiest first. Each one mastered is one rank step: 0 = F-, 20 = S+.
+  const TECH_GUIDES = { 0: 'boxing', 1: 'jab', 2: 'cross', 3: 'hook', 4: 'uppercut', 5: 'front-kick', 6: 'roundhouse', 8: 'front-kick', 15: 'roundhouse' };
   const TECHNIQUES = [
     ['Stance and guard', '3 minutes of light shadowboxing with your hands at your chin the whole time.'],
     ['Jab', '20 jabs at full extension, snapping straight back to your chin.'],
@@ -55,7 +56,7 @@
     ['Jumping front kick', '5 clean reps, landing balanced.'],
     ['Tornado kick', '5 clean 360° roundhouse kicks, landing balanced.'],
     ['540 kick', '3 clean reps, landing on the kicking leg.'],
-  ].map((t, i) => ({ i, name: t[0], std: t[1], jump: i >= 16 }));
+  ].map((t, i) => ({ i, name: t[0], std: t[1], jump: i >= 16, guide: TECH_GUIDES[i] || null }));
 
   function indexFor(th, v) { let i = 0; for (let k = 0; k < th.length; k++) if (v >= th[k]) i = k; return i; }
   function bestTests(r) {
@@ -123,53 +124,143 @@
       const v = Math.max(10, st.end.value), n = Math.min(10, 6 + Math.floor(st.end.index / 4));
       const b = Math.max(3, Math.round(v / 8)), sq = 50 + 5 * st.end.index;
       return { title: 'Fighter\'s Gauntlet', text: 'A long fight, not a sprint. No skipped rounds.', objectives: [
-        { id: 'rounds', text: n + ' rounds: 2 min shadowboxing, then ' + b + ' burpees. 30 s rest between rounds.', target: n, unit: 'rounds', timer: { work: 120, rest: 30, rounds: n } },
-        { id: 'squats', text: sq + ' squats for time, straight after the last round', target: sq, unit: 'squats', step: [5, 10] }] };
+        { id: 'rounds', text: n + ' rounds: 2 min shadowboxing, then ' + b + ' burpees. 30 s rest between rounds.', target: n, unit: 'rounds', timer: { work: 120, rest: 30, rounds: n }, guides: ['boxing', 'burpee'] },
+        { id: 'squats', text: sq + ' squats for time, straight after the last round', target: sq, unit: 'squats', step: [5, 10], guides: ['squat'] }] };
     },
     str(st) {
       const v = Math.max(8, st.str.value), push = Math.max(30, 5 * v), sq = Math.round((push * 1.5) / 5) * 5;
       return { title: 'Hundred Hands', text: 'Finish inside 40 minutes. Split the sets however you need.', objectives: [
-        { id: 'push', text: push + ' push-ups, any variation from your level', target: push, unit: 'push-ups', step: [1, 5] },
-        { id: 'rows', text: push + ' doorframe rows', target: push, unit: 'rows', step: [1, 5] },
-        { id: 'squats', text: sq + ' squats', target: sq, unit: 'squats', step: [5, 10] }] };
+        { id: 'push', text: push + ' push-ups, any variation from your level', target: push, unit: 'push-ups', step: [1, 5], guides: ['pushup'] },
+        { id: 'rows', text: push + ' doorframe rows', target: push, unit: 'rows', step: [1, 5], guides: ['door-row'] },
+        { id: 'squats', text: sq + ' squats', target: sq, unit: 'squats', step: [5, 10], guides: ['squat'] }] };
     },
     dur(st) {
       const v = Math.max(30, st.dur.value);
       const plank = Math.round(Math.max(180, 5 * v) / 10) * 10, wall = Math.round(Math.max(120, 3 * v) / 10) * 10, side = Math.round(Math.max(60, 1.5 * v) / 10) * 10;
       return { title: 'Iron Body', text: 'Total time under tension. Rest whenever you need; only the holds count.', objectives: [
-        { id: 'plank', text: fmtTime(plank) + ' of plank in total', target: plank, unit: 's', step: [10, 30] },
-        { id: 'wall', text: fmtTime(wall) + ' of wall sit in total', target: wall, unit: 's', step: [10, 30] },
-        { id: 'side', text: fmtTime(side) + ' of side plank on each side', target: side * 2, unit: 's, both sides', step: [10, 30] }] };
+        { id: 'plank', text: fmtTime(plank) + ' of plank in total', target: plank, unit: 's', step: [10, 30], guides: ['plank'] },
+        { id: 'wall', text: fmtTime(wall) + ' of wall sit in total', target: wall, unit: 's', step: [10, 30], guides: ['wall-sit'] },
+        { id: 'side', text: fmtTime(side) + ' of side plank on each side', target: side * 2, unit: 's, both sides', step: [10, 30], guides: ['side-plank'] }] };
     },
     spd(st) {
       const need = Math.ceil(Math.max(16, st.spd.value) * 0.8);
       return { title: 'Lightning Drills', text: 'Every round at full speed. A round under the target gets repeated.', objectives: [
-        { id: 'kicks', text: '10 rounds: 30 s of max-speed kicks, at least ' + need + ' per round. 30 s rest.', target: 10, unit: 'rounds', timer: { work: 30, rest: 30, rounds: 10 } },
-        { id: 'punch', text: '10 rounds: 10 s of all-out punches, 20 s rest', target: 10, unit: 'rounds', timer: { work: 10, rest: 20, rounds: 10 } }] };
+        { id: 'kicks', text: '10 rounds: 30 s of max-speed kicks, at least ' + need + ' per round. 30 s rest.', target: 10, unit: 'rounds', timer: { work: 30, rest: 30, rounds: 10 }, guides: ['roundhouse'] },
+        { id: 'punch', text: '10 rounds: 10 s of all-out punches, 20 s rest', target: 10, unit: 'rounds', timer: { work: 10, rest: 20, rounds: 10 }, guides: ['speed-punches'] }] };
     },
     tec(st, data) {
       const t = nextTechnique(data);
       return { title: 'Form Mastery', text: 'Technique: ' + t.name + '. Standard: ' + t.std, technique: t.i, objectives: [
-        { id: 'drill', text: '5 rounds of 3 min drilling it: 3 rounds slow, 2 at full speed. 1 min rest.', target: 5, unit: 'rounds', timer: { work: 180, rest: 60, rounds: 5 } },
-        { id: 'reps', text: '100 clean reps in total, both sides', target: 100, unit: 'reps', step: [5, 10] },
-        { id: 'film', text: 'Film 3 reps and check them against the standard', target: 1, unit: 'check' }] };
+        { id: 'drill', text: '5 rounds of 3 min drilling it: 3 rounds slow, 2 at full speed. 1 min rest.', target: 5, unit: 'rounds', timer: { work: 180, rest: 60, rounds: 5 }, guides: t.guide ? [t.guide] : [] },
+        { id: 'reps', text: '100 clean reps in total, both sides', target: 100, unit: 'reps', step: [5, 10], guides: t.guide ? [t.guide] : [] },
+        { id: 'film', text: 'Film 3 reps and check them against the standard', target: 1, unit: 'check', guides: [] }] };
     },
   };
+  // The boss week: every stat in one session, scaled from your results.
+  TEMPLATES.gate = (st) => {
+    const push = Math.max(6, Math.round(st.str.value * 0.5)), plank = Math.max(30, Math.round(st.dur.value * 0.5 / 5) * 5);
+    const kicks = Math.max(10, Math.round(st.spd.value * 0.8)), burp = Math.max(5, Math.round(st.end.value / 5));
+    return { title: 'Red Gate', text: 'The boss of the cycle. Every stat gets tested in one session. Rest only between rounds.', objectives: [
+      { id: 'circuit', text: '5 rounds: ' + push + ' push-ups, ' + fmtTime(plank) + ' plank, 30 s of kicks (aim for ' + kicks + '), ' + burp + ' burpees. 2 min rest between rounds.', target: 5, unit: 'rounds', step: [1], guides: ['pushup', 'plank', 'roundhouse', 'burpee'] },
+      { id: 'squats', text: '100 squats for time, straight after', target: 100, unit: 'squats', step: [5, 10], guides: ['squat'] },
+      { id: 'cool', text: '3 rounds of 3 min easy shadowboxing to cool down, 1 min rest', target: 3, unit: 'rounds', timer: { work: 180, rest: 60, rounds: 3 }, guides: ['boxing'] }] };
+  };
   const FOCUS_ORDER = ['end', 'str', 'dur', 'spd', 'tec'];
+  // The first 8 weeks: Awakening, then a fixed arc. The last week of each 4-week month is light, because the benchmark lands there.
+  const ARC = [null, 'dur', 'str', 'tec', 'spd', 'end', 'gate', 'tec'];
+  const ARC_WEEKS = ARC.length;
   function weekNo(startDate, ws) { return Math.floor(BB.daysBetween(BB.weekStart(startDate), ws) / 7); }
-  // Week 1 and every 4th week after is a Rank Trial. Other weeks target your lowest stat, never the same one twice in a row.
+  // After week 8 the same rhythm repeats: light technique weeks before each benchmark, a Red Gate before every second one,
+  // and the other weeks target your lowest stat, never the same one twice in a row.
+  function questFocus(data, ws, n, st) {
+    if (n < ARC_WEEKS) return ARC[n];
+    const c = n % ARC_WEEKS;
+    if (c === 3 || c === 7) return 'tec';
+    if (c === 6) return 'gate';
+    const prev = (data.quests || {})[BB.addDays(ws, -7)];
+    const pool = FOCUS_ORDER.filter((k) => k !== 'tec' && (!prev || prev.focus !== k));
+    pool.sort((a, b) => st[a].index - st[b].index || FOCUS_ORDER.indexOf(a) - FOCUS_ORDER.indexOf(b));
+    return pool[0];
+  }
   function makeQuest(data, ws, today) {
     const n = weekNo(data.profile.startDate, ws);
-    if (n % 4 === 0) {
-      return { type: 'trial', title: n === 0 ? 'Awakening Trial' : 'Rank Trial', text: 'Max effort on all four tests. Rest 3–5 minutes between them.',
+    if (n <= 0) {
+      return { type: 'trial', week: 1, title: 'Awakening Trial', text: 'Max effort on all four tests. Rest 3–5 minutes between them. These numbers are your starting point.',
         focus: null, objectives: TEST_KEYS.map((k) => ({ id: k, text: TESTS[k].test, test: k })), progress: {}, cleared: false };
     }
     const st = statState(data, today);
-    const prev = (data.quests || {})[BB.addDays(ws, -7)];
-    const pool = FOCUS_ORDER.filter((k) => !prev || prev.focus !== k);
-    pool.sort((a, b) => st[a].index - st[b].index || FOCUS_ORDER.indexOf(a) - FOCUS_ORDER.indexOf(b));
-    const focus = pool[0];
-    return Object.assign({ type: 'challenge', focus, progress: {}, cleared: false }, TEMPLATES[focus](st, data));
+    const focus = questFocus(data, ws, n, st);
+    return Object.assign({ type: 'challenge', week: n + 1, focus, progress: {}, cleared: false }, TEMPLATES[focus](st, data));
+  }
+
+  // ---------- Monthly benchmark: the four tests again at the end of every 4th week ----------
+  const benchMonthOf = (n) => ((n + 1) % 4 === 0 ? (n + 1) / 4 : null);
+  const benchWeekStart = (startDate, m) => BB.addDays(BB.weekStart(startDate), (4 * m - 1) * 7);
+  // The benchmark due now: this week's, or last month's if it was never finished (until the next one arrives).
+  function benchDue(data, today) {
+    const p = data.profile;
+    if (!p || !p.startDate) return null;
+    const n = weekNo(p.startDate, BB.weekStart(today));
+    const m = Math.floor((n + 1) / 4);
+    if (m < 1) return null;
+    const rec = ((data.ranks || {}).bench || {})[m];
+    if (rec && rec.done) return null;
+    return { month: m, overdue: benchMonthOf(n) !== m, ws: benchWeekStart(p.startDate, m) };
+  }
+  function awakening(data) {
+    const p = data.profile || {}, vals = {};
+    const q = p.startDate ? (data.quests || {})[BB.weekStart(p.startDate)] : null;
+    if (q && q.type === 'trial') TEST_KEYS.forEach((k) => { if (typeof q.progress[k] === 'number') vals[k] = q.progress[k]; });
+    const tests = ((data.ranks || {}).tests || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    TEST_KEYS.forEach((k) => { if (vals[k] == null) { const t = tests.find((x) => typeof x[k] === 'number'); if (t) vals[k] = t[k]; } });
+    return { values: vals, date: (q && q.clearedAt) || (tests[0] && tests[0].date) || null };
+  }
+  // Awakening first, then every month that has at least one result.
+  function benchHistory(data) {
+    const out = [], a = awakening(data);
+    if (Object.keys(a.values).length) out.push({ month: 0, label: 'Awakening', date: a.date, values: a.values, done: TEST_KEYS.every((k) => a.values[k] != null) });
+    const bench = (data.ranks || {}).bench || {};
+    Object.keys(bench).map(Number).sort((x, y) => x - y).forEach((m) => {
+      const b = bench[m];
+      if (b && b.progress && Object.keys(b.progress).length) out.push({ month: m, label: 'Month ' + m, date: b.doneAt || null, values: b.progress, done: !!b.done });
+    });
+    return out;
+  }
+
+  // ---------- Pasted results: "push-ups 18, plank 1:40, kicks 27, burpees 31" ----------
+  const PASTE = /(push[\s-]?ups?|press[\s-]?ups?|\bstr\b|strength|planks?|\bdur\b|durability|kicks?|roundhouses?|\bspd\b|speed|burpees?|\bend\b|endurance)/gi;
+  function pasteKey(w) {
+    w = w.toLowerCase();
+    return /push|press|str/.test(w) ? 'str' : /plank|dur/.test(w) ? 'dur' : /kick|round|spd|speed/.test(w) ? 'spd' : 'end';
+  }
+  function parseTime(s, last) {
+    const all = (re) => { const out = []; let m; re.lastIndex = 0; while ((m = re.exec(s))) out.push(m); return out; };
+    const pick = (list) => (list.length ? list[last ? list.length - 1 : 0] : null);
+    let m = pick(all(/(\d{1,2})\s*:\s*(\d{2})/g));
+    if (m) return Number(m[1]) * 60 + Number(m[2]);
+    m = pick(all(/(\d+(?:[.,]\d+)?)\s*(?:minutes?|mins?|m)(?![a-z])(?:\s*(\d{1,2})\s*(?:seconds?|secs?|s)(?![a-z]))?/gi));
+    if (m) return Math.round(Number(m[1].replace(',', '.')) * 60) + (m[2] ? Number(m[2]) : 0);
+    m = pick(all(/(\d{1,3})/g));
+    return m ? Number(m[1]) : null;
+  }
+  // Each number belongs to the test named right before it, or right after it when the text puts numbers first.
+  function parseTrialText(text) {
+    const s = String(text || ''), hits = [];
+    let m;
+    PASTE.lastIndex = 0;
+    while ((m = PASTE.exec(s))) hits.push({ k: pasteKey(m[1]), at: m.index, end: m.index + m[1].length });
+    const numberFirst = hits.length > 0 && /\d/.test(s.slice(0, hits[0].at));
+    const drop = (x) => x.replace(/\(?\s*(?:in\s+)?(?:30\s*s(?:ec\w*)?|3\s*min\w*)\s*\)?/gi, ' ');
+    const out = {};
+    hits.forEach((h, i) => {
+      if (out[h.k] != null) return;
+      const seg = numberFirst ? s.slice(i > 0 ? hits[i - 1].end : 0, h.at) : s.slice(h.end, i + 1 < hits.length ? hits[i + 1].at : s.length);
+      let v;
+      if (h.k === 'dur') v = parseTime(seg, numberFirst);
+      else { const nums = drop(seg).match(/\d{1,3}/g); v = nums ? Number(nums[numberFirst ? nums.length - 1 : 0]) : null; }
+      if (v != null && isFinite(v)) out[h.k] = v;
+    });
+    return out;
   }
   function objectiveDone(q, o) { return (Number(q.progress[o.id]) || 0) >= o.target; }
   function questDone(q) {
@@ -180,6 +271,7 @@
   const RK = {
     RANKS, rankName, rankIdx, tierOf, TESTS, TEST_KEYS, STAT_KEYS, STAT_INFO, DEFAULT_ESTIMATES, POT_BASE, TECHNIQUES,
     indexFor, bestTests, willpower, questClears, statState, nextTechnique, weekNo, makeQuest, objectiveDone, questDone, fmtTime,
+    ARC_WEEKS, benchMonthOf, benchWeekStart, benchDue, awakening, benchHistory, parseTrialText,
   };
   root.RK = RK;
   if (typeof module !== 'undefined' && module.exports) module.exports = RK;

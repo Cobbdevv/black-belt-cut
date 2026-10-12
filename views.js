@@ -29,7 +29,7 @@ function viewProgress() {
     const c = S.data.checkins[k];
     return '<tr><td>' + BB.niceDate(c.date || k) + '</td><td>' + (c.rating ? RATINGS[c.rating - 1] : '–') + '</td><td>' + (c.waist ? fmtKg(c.waist) + ' cm' : '–') + '</td></tr>';
   }).join('');
-  return '<h1 class="section-title">Progress</h1><div class="stats">' + tiles + '</div>' + chartCard(series, p) +
+  return '<h1 class="section-title">Progress</h1><div class="stats">' + tiles + '</div>' + claudeCard() + chartCard(series, p) +
     '<div class="card"><div class="card-head"><h2>Belts</h2><span class="small muted">by 7-day average</span></div><div class="ladder">' + beltLadder(tr) + '</div>' +
     '<p class="small muted">Each kilo below the top of your belt adds a stripe. Below 75 kg, each kilo adds a gold stripe.</p></div>' +
     '<div class="card"><div class="card-head"><h2>Strength levels</h2><button class="linkish" type="button" data-act="go" data-v="train">Change</button></div><div class="ladder">' + levelRows + '</div>' +
@@ -38,6 +38,37 @@ function viewProgress() {
     (ciRows ? '<div class="table-wrap"><table><thead><tr><th>Week of</th><th>Felt</th><th>Waist</th></tr></thead><tbody>' + ciRows + '</tbody></table></div>'
       : '<p class="small">Your first weekly check-in shows up here, with your waist size if you log it.</p>') + '</div>';
 }
+// ---------- Your log for Claude ----------
+function claudeCard() {
+  const r = S.ui.logRange || '30';
+  const chips = [['7', '7 days'], ['30', '30 days'], ['all', 'Everything']].map((c) => '<button type="button" class="chip' + (r === c[0] ? ' on' : '') + '" data-act="log-range" data-v="' + c[0] + '">' + c[1] + '</button>').join('');
+  return '<div class="card"><div class="card-head"><h2>Ask Claude</h2><span class="small muted">your whole log</span></div>' +
+    '<p class="small">Copies everything you logged as one message: workouts with your notes, weigh-ins, eating rules, cravings, quests and benchmarks. Paste it into Claude and ask for an opinion.</p>' +
+    '<div class="chips">' + chips + '</div>' +
+    '<div class="row"><button class="btn grow" type="button" data-act="log-copy">Copy for Claude</button><button class="btn line grow" type="button" data-act="log-save">Download</button></div></div>';
+}
+function logText() { const r = S.ui.logRange || '30'; return LOGBOOK.text(S.data, { today: today(), days: r === 'all' ? null : Number(r) }); }
+ACTIONS['log-range'] = (el) => { S.ui.logRange = el.dataset.v; render(); };
+ACTIONS['log-copy'] = async (el) => {
+  const text = logText();
+  try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into Claude.'); }
+  catch (e) {
+    const row = el.closest('.row');
+    if (!row.nextElementSibling || row.nextElementSibling.tagName !== 'TEXTAREA') row.insertAdjacentHTML('afterend', '<textarea class="input" readonly style="min-height:220px">' + esc(text) + '</textarea>');
+    row.nextElementSibling.select();
+    toast('Copying is blocked here. Select the text and copy it.');
+  }
+};
+ACTIONS['log-save'] = () => {
+  const blob = new Blob([logText()], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = LOGBOOK.fileName(today());
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Log downloaded.');
+};
+
 function beltLadder(tr) {
   const idx = tr == null ? 0 : BB.beltIndex(tr);
   return BB.BELTS.map((b, i) => '<div class="rung' + (i === idx ? ' now' : i < idx ? ' past' : '') + '"><span class="sw" style="background:' + b.color + '"></span>' +
@@ -152,6 +183,7 @@ function viewGuide() {
     '<li><b>After that:</b> about 0.5 kg a week. Some weeks show nothing. Watch the 7-day average, not the daily number.</li>' +
     '<li><b>Every few months:</b> a 2-week stall is common. Your weekly check-in spots it and gives you one thing to change.</li>' +
     '<li><b>Strength:</b> at 18 with a fighting background, your levels should keep climbing while the weight drops.</li></ul></div>' +
+    libraryCard() +
     '<form class="card" data-form="settings"><h2>Settings</h2>' +
     '<div class="field"><label for="st-why">Your why</label><textarea class="input" id="st-why">' + esc(p.why || '') + '</textarea></div>' +
     '<div class="field"><label>Goal weight</label><div class="chips" data-group="goal">' + [75, 72, 70].map((g) => '<button type="button" class="chip' + (p.goal === g ? ' on' : '') + '" data-act="pick" data-v="' + g + '">' + g + ' kg</button>').join('') + '</div></div>' +
@@ -168,6 +200,19 @@ function viewGuide() {
     (S.ui.auth === 'signed-in' ? '<button class="btn line" type="button" data-act="sign-out">' + (S.ui.confirmSignOut ? 'Tap again to sign out' : 'Sign out') + '</button>' : '') + '</div>' +
     '<div class="card quiet"><p class="small muted">Set three phone alarms for your training days so you never have to remember.</p>' +
     '<button class="btn line" type="button" data-act="reset">' + (S.ui.confirmReset ? 'Tap again to erase everything' : 'Start over') + '</button></div>';
+}
+// Every animated move, grouped the way the workouts use them. Tap one for the full how-to.
+function libraryCard() {
+  const lv = (pat) => BB.LADDERS[pat].levels.map((l) => l.guide);
+  const groups = [
+    ['Warm-up', BB.WARMUP.map((w) => w.guide).filter((g) => g !== 'boxing').concat('march')],
+    ['Squat', lv('squat')], ['Push', lv('push')], ['Pull', lv('pull')], ['Hips', lv('hinge')], ['Core', lv('core')],
+    ['Fighting', ['boxing', 'jab', 'cross', 'hook', 'uppercut', 'speed-punches', 'front-kick', 'roundhouse', 'knee-strike', 'kicks']],
+    ['Tests and quests', ['burpee', 'wall-sit']],
+  ];
+  const item = (id) => { const m = guideMove(id); return m ? '<button type="button" class="lib-item" data-act="guide" data-g="' + id + '">' + guideStage(id, 'thumb') + '<span>' + esc(m.name) + '</span></button>' : ''; };
+  return '<div class="card guide-lib"><div class="card-head"><h2>Exercise guides</h2><span class="small muted">tap for the how-to</span></div>' +
+    groups.map((g) => '<div class="lib-group"><div class="eyebrow">' + g[0] + '</div><div class="lib">' + g[1].map(item).join('') + '</div></div>').join('') + '</div>';
 }
 FORMS.settings = (f) => {
   const p = S.data.profile;
@@ -189,7 +234,7 @@ ACTIONS.reset = () => {
   }
   S.ui.confirmReset = false;
   S.data.profile = { onboarded: false, height: 175, age: 18, goal: 75, levels: Object.assign({}, BB.DEFAULT_LEVELS), levers: [] };
-  S.data.weights = {}; S.data.habits = {}; S.data.sessions = []; S.data.urges = {}; S.data.checkins = {}; S.data.ranks = {}; S.data.quests = {};
+  S.data.weights = {}; S.data.habits = {}; S.data.sessions = []; S.data.urges = {}; S.data.checkins = {}; S.data.ranks = {}; S.data.quests = {}; S.data.notes = {};
   Object.keys(DOCS).forEach(save);
   DRAFT = null; saveDraft();
   S.ui.tab = 'today';

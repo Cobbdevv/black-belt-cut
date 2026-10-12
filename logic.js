@@ -144,45 +144,52 @@
   const ORDER = ['squat', 'push', 'pull', 'hinge', 'core'];
   const LADDERS = {
     squat: { label: 'Squat', levels: [
-      { name: 'Chair sit-to-stand', cue: 'Sit down slowly to a chair, stand up without using your hands.', min: 8, max: 15 },
-      { name: 'Bodyweight squat', cue: 'Feet shoulder-width, hips back, go as low as you can control.', min: 10, max: 20 },
-      { name: 'Pause squat', cue: 'Hold 3 seconds at the bottom of every rep.', min: 8, max: 15 },
-      { name: 'Reverse lunge', cue: 'Step back, lower the back knee toward the floor, push through the front heel.', min: 8, max: 12, side: 'leg' },
-      { name: 'Bulgarian split squat', cue: 'Rear foot on the couch, drop straight down.', min: 8, max: 12, side: 'leg' },
-      { name: 'Backpack split squat', cue: 'Bulgarian split squat wearing a backpack full of books.', min: 8, max: 12, side: 'leg' },
+      { name: 'Chair sit-to-stand', guide: 'chair-squat', cue: 'Sit down slowly to a chair, stand up without using your hands.', min: 8, max: 15 },
+      { name: 'Bodyweight squat', guide: 'squat', cue: 'Feet shoulder-width, hips back, go as low as you can control.', min: 10, max: 20 },
+      { name: 'Pause squat', guide: 'pause-squat', cue: 'Hold 3 seconds at the bottom of every rep.', min: 8, max: 15 },
+      { name: 'Reverse lunge', guide: 'reverse-lunge', cue: 'Step back, lower the back knee toward the floor, push through the front heel.', min: 8, max: 12, side: 'leg' },
+      { name: 'Bulgarian split squat', guide: 'split-squat', cue: 'Rear foot on the couch, drop straight down.', min: 8, max: 12, side: 'leg' },
+      { name: 'Backpack split squat', guide: 'split-squat-pack', cue: 'Bulgarian split squat wearing a backpack full of books.', min: 8, max: 12, side: 'leg' },
     ] },
     push: { label: 'Push', levels: [
-      { name: 'Counter push-up', cue: 'Hands on the kitchen counter, body in one straight line.', min: 8, max: 15 },
-      { name: 'Low incline push-up', cue: 'Hands on a stair or a sturdy low table. Chest to the edge.', min: 8, max: 15 },
-      { name: 'Push-up', cue: 'From the floor. Elbows about 45° from your body.', min: 5, max: 12 },
-      { name: 'Slow push-up', cue: '3 seconds down, 1 second up.', min: 5, max: 12 },
-      { name: 'Feet-up push-up', cue: 'Feet on a chair or the couch.', min: 5, max: 12 },
+      { name: 'Counter push-up', guide: 'counter-pushup', cue: 'Hands on the kitchen counter, body in one straight line.', min: 8, max: 15 },
+      { name: 'Low incline push-up', guide: 'incline-pushup', cue: 'Hands on a stair or a sturdy low table. Chest to the edge.', min: 8, max: 15 },
+      { name: 'Push-up', guide: 'pushup', cue: 'From the floor. Elbows about 45° from your body.', min: 5, max: 12 },
+      { name: 'Slow push-up', guide: 'slow-pushup', cue: '3 seconds down, 1 second up.', min: 5, max: 12 },
+      { name: 'Feet-up push-up', guide: 'decline-pushup', cue: 'Feet on a chair or the couch.', min: 5, max: 12 },
     ] },
     pull: { label: 'Pull', levels: [
-      { name: 'Doorframe row', cue: 'Grip both sides of a doorframe, feet close to it, lean back on straight arms, pull your chest to the frame.', min: 10, max: 15 },
-      { name: 'Deep doorframe row', cue: 'Same row with your feet closer, so you lean back further.', min: 10, max: 15 },
-      { name: 'One-arm doorframe row', cue: 'One hand on the frame, pull without twisting.', min: 8, max: 12, side: 'arm' },
-      { name: 'Slow one-arm row', cue: 'One-arm row, 3 seconds on the way back out.', min: 8, max: 12, side: 'arm' },
+      { name: 'Doorframe row', guide: 'door-row', cue: 'Grip both sides of a doorframe, feet close to it, lean back on straight arms, pull your chest to the frame.', min: 10, max: 15 },
+      { name: 'Deep doorframe row', guide: 'deep-door-row', cue: 'Same row with your feet closer, so you lean back further.', min: 10, max: 15 },
+      { name: 'One-arm doorframe row', guide: 'one-arm-row', cue: 'One hand on the frame, pull without twisting.', min: 8, max: 12, side: 'arm' },
+      { name: 'Slow one-arm row', guide: 'slow-one-arm-row', cue: 'One-arm row, 3 seconds on the way back out.', min: 8, max: 12, side: 'arm' },
     ] },
     hinge: { label: 'Hips', levels: [
-      { name: 'Glute bridge', cue: 'On your back, feet flat, squeeze your glutes to lift your hips.', min: 12, max: 20 },
-      { name: 'Glute bridge, 3 s squeeze', cue: 'Hold the top for 3 seconds every rep.', min: 10, max: 15 },
-      { name: 'Hip thrust', cue: 'Shoulders on the couch edge, drive your hips up to a straight line.', min: 10, max: 20 },
-      { name: 'Single-leg glute bridge', cue: 'One foot on the floor, the other leg up.', min: 8, max: 15, side: 'leg' },
-      { name: 'Single-leg hip thrust', cue: 'Shoulders on the couch, one leg.', min: 8, max: 15, side: 'leg' },
+      { name: 'Glute bridge', guide: 'bridge', cue: 'On your back, feet flat, squeeze your glutes to lift your hips.', min: 12, max: 20 },
+      { name: 'Glute bridge, 3 s squeeze', guide: 'bridge-hold', cue: 'Hold the top for 3 seconds every rep.', min: 10, max: 15 },
+      { name: 'Hip thrust', guide: 'hip-thrust', cue: 'Shoulders on the couch edge, drive your hips up to a straight line.', min: 10, max: 20 },
+      { name: 'Single-leg glute bridge', guide: 'sl-bridge', cue: 'One foot on the floor, the other leg up.', min: 8, max: 15, side: 'leg' },
+      { name: 'Single-leg hip thrust', guide: 'sl-hip-thrust', cue: 'Shoulders on the couch, one leg.', min: 8, max: 15, side: 'leg' },
     ] },
     core: { label: 'Core', levels: [
-      { name: 'Dead bug', cue: 'Lower back pressed down, reach the opposite arm and leg out slowly.', min: 6, max: 12, side: 'side' },
-      { name: 'Plank', cue: 'On your forearms, squeeze your glutes, keep your hips level.', min: 20, max: 45, unit: 's' },
-      { name: 'Side plank', cue: 'Forearm under your shoulder, hips high.', min: 15, max: 30, unit: 's', side: 'side' },
-      { name: 'Hollow hold', cue: 'Lower back pressed down, arms and legs reaching long.', min: 15, max: 30, unit: 's' },
+      { name: 'Dead bug', guide: 'dead-bug', cue: 'Lower back pressed down, reach the opposite arm and leg out slowly.', min: 6, max: 12, side: 'side' },
+      { name: 'Plank', guide: 'plank', cue: 'On your forearms, squeeze your glutes, keep your hips level.', min: 20, max: 45, unit: 's' },
+      { name: 'Side plank', guide: 'side-plank', cue: 'Forearm under your shoulder, hips high.', min: 15, max: 30, unit: 's', side: 'side' },
+      { name: 'Hollow hold', guide: 'hollow-hold', cue: 'Lower back pressed down, arms and legs reaching long.', min: 15, max: 30, unit: 's' },
     ] },
   };
   const DEFAULT_LEVELS = { squat: 2, push: 2, pull: 1, hinge: 1, core: 1 };
   const FINISHERS = {
-    boxing: { name: 'Boxing rounds', cue: 'Shadowbox: jab, cross, hook, uppercut. Stay light on your feet and breathe out on every punch.' },
-    kicks: { name: 'Kick rounds', cue: 'Front kicks, roundhouse kicks and knees at a controlled speed. Switch sides every 30 seconds.' },
+    boxing: { name: 'Boxing rounds', guide: 'boxing', cue: 'Shadowbox: jab, cross, hook, uppercut. Stay light on your feet and breathe out on every punch.' },
+    kicks: { name: 'Kick rounds', guide: 'kicks', cue: 'Front kicks, roundhouse kicks and knees at a controlled speed. Switch sides every 30 seconds.' },
   };
+  // 3 minutes, played back to back before every full workout.
+  const WARMUP = [
+    { guide: 'arm-circles', secs: 30 },
+    { guide: 'leg-swings', secs: 40, cue: '10 swings per leg' },
+    { guide: 'jumping-jacks', secs: 40, cue: 'or march on the spot' },
+    { guide: 'boxing', secs: 70, cue: 'easy and loose' },
+  ];
   function levelDef(pattern, level) {
     const lv = LADDERS[pattern].levels;
     return lv[Math.max(1, Math.min(lv.length, level)) - 1];
@@ -235,7 +242,7 @@
     trendSeries, latestTrend, slopePerWeek, projectGoalDate, isStalled,
     BASE_HABITS, LEVERS, activeHabits, goodDayNeed, dayDone, isGoodDay, habitStreak, missedYesterday,
     sessionsInWeek, weekStreak,
-    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
+    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, WARMUP, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
     lastActiveDate,
   };
   root.BB = BB;

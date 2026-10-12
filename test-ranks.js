@@ -51,29 +51,65 @@ assert.strictEqual(RK.rankName(RK.statState(d, today).pot.index), 'A+');
 ok('willpower waits 7 days; potential grows every 4 clears');
 
 d = base();
-const q0 = RK.makeQuest(d, '2026-10-12', '2026-10-12');
-assert.strictEqual(q0.type, 'trial'); assert.strictEqual(q0.title, 'Awakening Trial');
-const q1 = RK.makeQuest(d, '2026-10-19', '2026-10-19');
-assert.strictEqual(q1.type, 'challenge'); assert.strictEqual(q1.focus, 'end'); // D- is the lowest
-d.quests['2026-10-19'] = q1;
-const q2 = RK.makeQuest(d, '2026-10-26', '2026-10-26');
-assert.notStrictEqual(q2.focus, 'end'); // never twice in a row
-assert.strictEqual(RK.makeQuest(d, '2026-11-09', '2026-11-09').type, 'trial'); // week 5
+const wk = (n) => BB.addDays('2026-10-12', 7 * n);
+const q0 = RK.makeQuest(d, wk(0), wk(0));
+assert.strictEqual(q0.type, 'trial'); assert.strictEqual(q0.title, 'Awakening Trial'); assert.strictEqual(q0.week, 1);
+const arc = [];
+for (let n = 1; n < 8; n++) { const q = RK.makeQuest(d, wk(n), wk(n)); d.quests[wk(n)] = q; arc.push(q.focus); assert.strictEqual(q.type, 'challenge'); assert.strictEqual(q.week, n + 1); }
+assert.deepStrictEqual(arc, ['dur', 'str', 'tec', 'spd', 'end', 'gate', 'tec']);
+ok('weeks 1 to 8: Awakening, then the fixed arc with a Red Gate in week 7');
+
+for (let n = 8; n < 24; n++) { const q = RK.makeQuest(d, wk(n), wk(n)); d.quests[wk(n)] = q; }
+for (let n = 8; n < 24; n++) {
+  const f = d.quests[wk(n)].focus, c = n % 8;
+  if (c === 3 || c === 7) assert.strictEqual(f, 'tec', 'light week before benchmark ' + n);
+  else if (c === 6) assert.strictEqual(f, 'gate', 'red gate ' + n);
+  else { assert.notStrictEqual(f, d.quests[wk(n - 1)].focus, 'no repeat ' + n); assert.ok(['end', 'str', 'dur', 'spd'].includes(f)); }
+}
+assert.strictEqual(d.quests[wk(8)].focus, 'end'); // after the arc: lowest stat first (END is D-)
+ok('after week 8: lowest stat first, never twice in a row, the same light weeks and Red Gates');
+
+const q1 = d.quests[wk(1)];
 q1.objectives.forEach((o) => { q1.progress[o.id] = o.target; });
 assert.ok(RK.questDone(q1));
-const tq = RK.makeQuest(d, '2026-10-12', '2026-10-12');
+const tq = RK.makeQuest(base(), wk(0), wk(0));
 tq.progress = { str: 15, dur: 80, spd: 30 };
 assert.ok(!RK.questDone(tq)); tq.progress.end = 25; assert.ok(RK.questDone(tq));
-for (const f of ['end', 'str', 'dur', 'spd', 'tec']) {
-  const prevFocus = ['end', 'str', 'dur', 'spd', 'tec'].filter((x) => x !== f);
-  // force the focus by blocking every other candidate's rank: give f the lowest estimate
+for (const f of ['end', 'str', 'dur', 'spd', 'tec', 'gate']) {
   const dd = base();
   dd.ranks.estimates = { str: 'S', dur: 'S', spd: 'S', end: 'S', tec: 'S' };
-  dd.ranks.estimates[f] = 'F';
-  const q = RK.makeQuest(dd, '2026-10-19', '2026-10-19');
+  if (f !== 'gate' && f !== 'tec') dd.ranks.estimates[f] = 'F';
+  const n = { tec: 3, gate: 6 }[f] || 8;
+  const q = RK.makeQuest(dd, wk(n), wk(n));
   assert.strictEqual(q.focus, f);
-  q.objectives.forEach((o) => { assert.ok(o.target > 0 && o.text.length > 5, f + ' objective'); assert.ok(!/NaN|undefined/.test(o.text), f + ': ' + o.text); });
-  void prevFocus;
+  q.objectives.forEach((o) => {
+    assert.ok(o.target > 0 && o.text.length > 5, f + ' objective');
+    assert.ok(!/NaN|undefined/.test(o.text), f + ': ' + o.text);
+    assert.ok(Array.isArray(o.guides), f + ' objective has guides');
+  });
 }
-ok('quests: trial on weeks 1 and 5, lowest stat first, no repeats, every template valid');
+ok('every quest template is valid, scaled and links its how-to guides');
+
+d = base();
+assert.strictEqual(RK.benchDue(d, wk(2)), null);
+assert.deepStrictEqual(RK.benchDue(d, BB.addDays(wk(3), 4)), { month: 1, overdue: false, ws: wk(3) });
+assert.strictEqual(RK.benchDue(d, wk(4)).overdue, true); // week 5: last month's is still open
+d.ranks.bench = { 1: { progress: { str: 20, dur: 90, spd: 31, end: 27 }, done: true, doneAt: BB.addDays(wk(3), 5) } };
+assert.strictEqual(RK.benchDue(d, wk(4)), null);
+assert.strictEqual(RK.benchDue(d, wk(7)).month, 2);
+d.quests[wk(0)] = Object.assign(RK.makeQuest(d, wk(0), wk(0)), { progress: { str: 15, dur: 85, spd: 29, end: 24 }, cleared: true, clearedAt: '2026-10-13' });
+const h = RK.benchHistory(d);
+assert.deepStrictEqual(h.map((x) => x.label), ['Awakening', 'Month 1']);
+assert.strictEqual(h[0].values.str, 15); assert.strictEqual(h[1].values.str, 20); assert.ok(h[0].done && h[1].done);
+ok('benchmarks: due at the end of every 4th week, stay open until done, history starts at the Awakening');
+
+const P = RK.parseTrialText;
+assert.deepStrictEqual(P('push-ups 18, plank 1:40, kicks 27, burpees 31'), { str: 18, dur: 100, spd: 27, end: 31 });
+assert.deepStrictEqual(P('push-ups 18 plank 1:40 kicks 27 burpees 31'), { str: 18, dur: 100, spd: 27, end: 31 });
+assert.deepStrictEqual(P('18 push-ups, 1:40 plank, 27 kicks, 31 burpees'), { str: 18, dur: 100, spd: 27, end: 31 });
+assert.deepStrictEqual(P('STR 21\nDUR 95\nSPD 30\nEND 25'), { str: 21, dur: 95, spd: 30, end: 25 });
+assert.deepStrictEqual(P('Kicks in 30 seconds: 27\nBurpees in 3 minutes: 31\nPlank: 2 min 5 s'), { spd: 27, end: 31, dur: 125 });
+assert.deepStrictEqual(P('plank 1m40s'), { dur: 100 });
+assert.deepStrictEqual(P('nothing here'), {});
+ok('pasted results: names before or after numbers, m:ss, minutes and seconds');
 console.log('all rank tests passed');

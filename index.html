@@ -310,8 +310,93 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
 .r-none { color: var(--muted); border-color: var(--line-2); border-style: dashed; }
 .card-head .rank { font-size: 16px; min-width: 36px; padding: 1px 6px; }
 
+/* ---------- Exercise figures: line pictograms on a dark stage ---------- */
+.fg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fg path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fg .fg-ink { stroke: var(--ink); }
+.fg .fg-far { stroke: var(--muted); }
+.fg .fg-halo { stroke: var(--bg); }
+.fg .fg-head { fill: var(--ink); }
+.fg .fg-halo-f { fill: var(--bg); }
+.fg .fg-floor { stroke: var(--line-2); stroke-width: 1.2; }
+.fg .fg-prop { stroke: var(--muted); stroke-width: 1.6; }
+.fg .fg-hatch { stroke: var(--line-2); stroke-width: 1; }
+.fg .fg-pack { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.4; }
+.fg .fg-guide { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2.5; }
+.fg .fg-arrow { stroke: var(--ink-2); stroke-width: 1.4; }
+.fg .fg-trail { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 2 2; }
+.fg .fg-text { fill: var(--ink-2); font-family: var(--mono); font-size: 4.4px; font-weight: 600; letter-spacing: .08em; }
+.fg .fg-x circle { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; }
+.fg .fg-x path { stroke: var(--ink); stroke-width: 1.3; }
+.fg-stage { position: relative; display: flex; flex-direction: column; aspect-ratio: 16 / 10; padding: 8px 8px 0; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.fg-stage > .fg { flex: 1; min-height: 0; }
+.fg-stage.fg-mini, .fg-stage.fg-thumb { aspect-ratio: 4 / 3; padding: 4px; }
+.fg-tempo { position: relative; flex: none; height: 24px; margin: 6px -8px 0; border-top: 1px solid var(--line); }
+.fg-tempo span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; border-left: 1px solid var(--line); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fg-play { position: absolute; top: -1px; bottom: 0; left: 0; width: 2px; background: var(--ink); }
+.fg-frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.fg-frames figure { margin: 0; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fg-frames .fg { height: auto; aspect-ratio: 4 / 3; padding: 3px; background: var(--bg); border: 1px solid var(--line); }
+.fg-frames figcaption { font-size: 12px; line-height: 1.3; color: var(--ink-2); }
+.fg-frames figcaption b { margin-right: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.fg-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.how { align-self: flex-start; font-size: 14px; }
+
+/* ---------- Workout steps ---------- */
+.session { display: flex; flex-direction: column; gap: 14px; }
+.stepbar { display: flex; gap: 6px; overflow-x: auto; padding: 2px; margin: 0 -2px; scrollbar-width: none; }
+.stepbar::-webkit-scrollbar { display: none; }
+.sb { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 6px 10px 6px 6px; border: 1px solid var(--line-2); border-radius: 2px; background: transparent; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.sb i { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line-2); font-style: normal; font-size: 10px; }
+.sb i svg { width: 13px; height: 13px; }
+.sb.done i { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.sb.on { border-color: var(--ink); background: var(--surface-2); color: var(--ink); }
+.ex-title { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: .95; letter-spacing: .02em; text-transform: uppercase; }
+.intro-grid { display: grid; gap: 16px; }
+.intro-show, .intro-text { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.intro-plan { display: flex; flex-direction: column; gap: 3px; padding: 4px 0 4px 12px; border-left: 3px solid var(--ink); }
+.intro-plan b { font-size: 18px; }
+.work-head { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px; align-items: start; }
+.work-head > div { display: flex; flex-direction: column; gap: 4px; }
+.work-thumb, .plan-thumb { display: block; width: 100%; padding: 0; border: 0; background: none; }
+.warm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.warm-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.session-end { display: flex; flex-direction: column; gap: 10px; }
+.card.plan-ex { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 14px; align-items: start; }
+.plan-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* ---------- Quests, trials, benchmarks, notes, guide library ---------- */
+.obj-how { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.obj-how .small { color: var(--sys-dim); }
+.sys .how { color: var(--sys-ink); font-size: 13px; }
+.trial-test { padding-top: 12px; border-top: 1px dashed var(--line-2); }
+.tt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.tt-head .how { flex: none; white-space: nowrap; }
+.tt-btn { align-self: flex-start; }
+.tt-run { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.tt-clock { min-width: 2.6ch; font-family: var(--display); font-weight: 900; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.paste summary { cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-2); }
+.paste[open] { display: flex; flex-direction: column; gap: 8px; }
+.rank-move { display: inline-flex; align-items: center; gap: 6px; }
+.rank-move i { font-style: normal; color: var(--sys-dim); }
+.report-facts { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.tech-row { display: flex; align-items: center; gap: 10px; }
+.tech-row .habit { flex: 1; min-width: 0; }
+.tech-row .how { flex: none; font-size: 13px; }
+.notes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.notes .muted { font-family: var(--mono); font-size: 11px; }
+.lib-group { display: flex; flex-direction: column; gap: 8px; }
+.lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.lib-item { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; border: 1px solid var(--line); background: transparent; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink); transition: border-color .15s ease; }
+.lib-item:hover { border-color: var(--line-2); }
+.lib-item .fg-stage { border: 0; border-bottom: 1px solid var(--line); }
+.lib-item span { padding: 0 8px; line-height: 1.25; }
+
 /* ---------- Desktop ---------- */
 @media (min-width: 960px) {
+  .intro-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; }
+  .ex-title { font-size: 44px; }
+  .view > .card.guide-lib { column-span: all; }
   body { background-size: 44px 44px; }
   .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh; }
   .side { display: flex; flex-direction: column; gap: 30px; position: sticky; top: 0; height: 100vh; padding: 28px 22px; border-right: 1px solid var(--line); background: rgba(8, 8, 8, .9); }
@@ -382,6 +467,9 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
 <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
 <script src="logic.js"></script>
 <script src="ranks.js"></script>
+<script src="figure.js"></script>
+<script src="moves.js"></script>
+<script src="logbook.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script src="sync.js"></script>
