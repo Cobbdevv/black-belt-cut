@@ -2,7 +2,9 @@
 
 A personal fat-loss tracker that installs like an app on your phone and computers. It has daily eating rules, bodyweight workouts that level up on their own, a craving timer and belt ranks for weight. It also has F- to S+ stat ranks with weekly quests. You use one login on every device, and it works offline.
 
-It needs no app store and no server of your own. The app lives on GitHub Pages and your log lives in Firebase, both free. Until step 3 is done, the app still works and saves on each device only.
+It needs no app store and no server of your own. The app lives on GitHub Pages and your log lives in Firebase, both free.
+
+**Status:** it's live at https://cobbdevv.github.io/black-belt-cut/ and connected to Firebase project `uhhproject-360e4`. Email/password sign-in is on, the Firestore database is in `eur3`, and the rules from `firestore.rules` are published. Steps 1–4 below are already done; they're kept for reference in case you ever rebuild it. Just do step 5.
 
 ## Setup (about 20 minutes, no coding)
 
@@ -71,5 +73,7 @@ Edit a file on GitHub (pencil, then Commit), or clone the repo with git. The sit
 - Data is stored at `users/<uid>/log/{profile,weights,habits,sessions,urges,checkins,ranks,quests}`.
 
 **Tests:** run `node test-logic.js && node test-ranks.js && node test-app.js && node test-sync.js`. On a machine without Node, VS Code's runtime works: set `ELECTRON_RUN_AS_NODE=1`, then run `Code.exe test-app.js`.
+
+**Hosting and backend:** the repo is `Cobbdevv/black-belt-cut` on GitHub Pages. Firebase project `uhhproject-360e4` was set up with the Firebase CLI: `firebase deploy --only firestore:rules,auth`, with `"auth": {"providers": {"emailPassword": true}}` in firebase.json.
 
 **Earlier version:** this replaced a claude.ai artifact version (https://claude.ai/artifact/2YW76wtSs3bDTejZzZbAfe), which he never logged data in.
