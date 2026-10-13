@@ -9,6 +9,8 @@ function saveDraft() {
 }
 function workoutDraft() {
   if (DRAFT && DRAFT.date !== today()) { DRAFT = null; saveDraft(); }
+  // A short workout started before short workouts had a warm-up keeps its place and counts the warm-up as done.
+  if (DRAFT && DRAFT.kind === 'short' && !DRAFT.v) { DRAFT.step = (DRAFT.step || 0) + 1; DRAFT.warmup = true; DRAFT.v = 2; saveDraft(); }
   return DRAFT;
 }
 function clock(ms) {
@@ -122,7 +124,7 @@ function viewPlan() {
     '<p class="small">Full body: a 3-minute warm-up, 3 sets of each move with 60 seconds of rest, then ' + BB.roundsTarget(S.data.sessions) + ' ' + fin.name.toLowerCase() + '. ' +
     'It takes you through one move at a time and shows how to do each one before you start it. Beat last time by one rep. Hit the top of the range on every set and you move up a level automatically.</p>' +
     '<div class="row"><button class="btn grow" data-act="start" data-kind="full" type="button">Start workout</button>' +
-    '<button class="btn ghost grow" data-act="start" data-kind="short" type="button">Short · 12 min</button></div>' + rows +
+    '<button class="btn ghost grow" data-act="start" data-kind="short" type="button">Short · 15 min</button></div>' + rows +
     '<div class="card ex plan-ex"><button type="button" class="plan-thumb" data-act="guide" data-g="' + fin.guide + '" aria-label="How to do ' + esc(fin.name) + '">' + guideStage(fin.guide, 'thumb') + '</button>' +
     '<div class="plan-body"><div class="ex-name">' + fin.name + '</div><p class="ex-cue">' + fin.cue + '</p>' +
     '<p class="small">2-minute rounds with 1 minute of rest. Boxing and kick rounds take turns, and you add a round every 6 workouts.</p>' + howBtn(fin.guide) + '</div></div>' +
@@ -138,7 +140,7 @@ ACTIONS.start = (el) => {
   DRAFT = {
     date: today(), kind, nSets, started: Date.now(), finisher: BB.nextFinisher(S.data.sessions),
     roundsTarget: kind === 'full' ? BB.roundsTarget(S.data.sessions) : 1, roundsDone: 0, warmup: false, ex, round: { phase: 'idle' },
-    step: 0, seen: {}, warm: null,
+    step: 0, seen: {}, warm: null, v: 2,
   };
   saveDraft();
   audioOn();
@@ -157,7 +159,7 @@ ACTIONS.level = (el) => {
 
 // ---------- Live session: warm-up, then each move (how-to first, then sets), then rounds ----------
 const STEP_NAMES = { warmup: 'Warm-up', finisher: 'Rounds' };
-function sessionSteps(d) { return (d.kind === 'full' ? ['warmup'] : []).concat(Object.keys(d.ex), ['finisher']); }
+function sessionSteps(d) { return ['warmup'].concat(Object.keys(d.ex), ['finisher']); }
 const stepName = (k) => STEP_NAMES[k] || BB.LADDERS[k].label;
 function stepDone(d, k) {
   if (k === 'warmup') return !!d.warmup;
@@ -382,49 +384,64 @@ function stretchCard() {
   }
   const done = stretchMins(t) > 0;
   return '<div class="card"><div class="card-head"><h2>Stretch</h2><span class="small muted">' + n + ' of 7 days this week</span></div>' +
-    '<p class="small">' + (done ? 'Done today. Flexibility comes from stretching most days, not from one long session.' : BB.STRETCH_MINS + ' minutes for your hips and kicks. Every day you can, after a workout or in the evening.') + '</p>' +
+    '<p class="small">' + (done ? 'Done today. Flexibility comes from stretching most days, not from one long session.' : BB.STRETCH_MINS + ' minutes for your hips and kicks, after a 3-minute warm-up that it skips if you just trained. Every day you can.') + '</p>' +
     '<div class="week">' + dots + '</div>' +
     '<div class="row"><button class="btn grow' + (done ? ' line' : '') + '" type="button" data-act="stretch-start">' + (done ? 'Stretch again' : 'Start stretching') + '</button>' +
     (done ? '' : '<button class="btn ghost grow" type="button" data-act="stretch-log">Did it without the timer</button>') + '</div></div>';
 }
 function stretchLeft(st) { return st.paused ? st.left : st.end - Date.now(); }
+// Warm tissue stretches further and more safely, so the routine opens with the 3-minute warm-up,
+// unless a workout ended in the last 45 minutes and you are already warm.
+const WARM_FOR_MS = 45 * 60000;
+function justTrained() { const now = Date.now(); return S.data.sessions.some((s) => s.endedAt && now - s.endedAt < WARM_FOR_MS); }
+function stretchPlan(warm) { return (warm ? [] : BB.WARMUP.map((x) => Object.assign({ warm: true }, x))).concat(BB.stretchSteps()); }
 function stretchSheet() {
-  const st = S.ui.st, steps = BB.stretchSteps();
+  const st = S.ui.st, plan = st.plan;
   if (st.done) {
-    return '<div class="eyebrow">Stretching</div><h2>Done</h2><p>' + plural(st.mins, 'minute') + ' logged for today. Do it again tomorrow: stretching most days is what changes your range.</p>' +
+    return '<div class="eyebrow">Stretching</div><h2>' + (st.mins ? 'Done' : 'Stopped') + '</h2>' +
+      '<p>' + (st.mins ? plural(st.mins, 'minute') + ' logged for today. Do it again tomorrow: stretching most days is what changes your range.' : 'Less than 30 seconds of stretching, so nothing was logged.') + '</p>' +
       '<button class="btn block" data-act="close" type="button">Done</button>';
   }
-  const s = steps[st.i], m = guideMove(s.guide);
-  return '<div class="eyebrow">Stretch · ' + (st.i + 1) + ' of ' + steps.length + '</div><h2>' + esc(m ? m.name : s.guide) + (s.side ? ' · ' + s.side : '') + '</h2>' +
+  const s = plan[st.i], m = guideMove(s.guide);
+  const nWarm = plan.filter((x) => x.warm).length, nStretch = plan.length - nWarm;
+  const head = s.warm ? 'Warm-up · ' + (st.i + 1) + ' of ' + nWarm : 'Stretch · ' + (st.i - nWarm + 1) + ' of ' + nStretch;
+  const say = !m ? '' : s.warm ? m.steps[1] + (s.cue ? ' (' + s.cue + ')' : '') : m.steps[2];
+  const warmNote = !s.warm && st.i === nWarm && st.warm ? '<p class="small muted" style="text-align:center">You just trained, so you are warm. Straight into the stretches.</p>' : '';
+  return '<div class="eyebrow">' + head + '</div><h2>' + esc(m ? m.name : s.guide) + (s.side ? ' · ' + s.side : '') + '</h2>' + warmNote +
     guideStage(s.guide) + '<div class="timer" id="st-clock">' + clock(stretchLeft(st)) + '</div>' +
-    (m ? '<p class="small" style="text-align:center">' + esc(m.steps[2]) + '</p>' : '') +
+    (say ? '<p class="small" style="text-align:center">' + esc(say) + '</p>' : '') +
     '<div class="row"><button class="btn ghost grow" type="button" data-act="stretch-pause">' + (st.paused ? 'Resume' : 'Pause') + '</button>' +
-    '<button class="btn line grow" type="button" data-act="stretch-next">' + (st.i + 1 < steps.length ? 'Next' : 'Finish') + '</button></div>' +
-    '<button class="linkish" type="button" data-act="stretch-end" style="align-self:center">Stop here and log it</button>';
+    '<button class="btn line grow" type="button" data-act="stretch-next">' + (st.i + 1 < plan.length ? 'Next' : 'Finish') + '</button></div>' +
+    (s.warm ? '<button class="linkish" type="button" data-act="stretch-skip-warm" style="align-self:center">Skip the warm-up, I am already warm</button>'
+      : '<button class="linkish" type="button" data-act="stretch-end" style="align-self:center">Stop here and log it</button>');
 }
-// Time actually spent stretching so far: skipped seconds and pauses don't count.
+// Time actually spent stretching so far: the warm-up, skipped seconds and pauses don't count.
 function stretchSpent(st) {
-  if (st.end == null) return st.spent || 0;
-  const ms = BB.stretchSteps()[st.i].secs * 1000;
+  const s = st.plan[st.i];
+  if (st.end == null || s.warm) return st.spent || 0;
+  const ms = s.secs * 1000;
   return (st.spent || 0) + Math.max(0, Math.min(ms, ms - stretchLeft(st)));
 }
 function stretchGo(i) {
-  const st = S.ui.st, steps = BB.stretchSteps();
+  const st = S.ui.st, plan = st.plan;
   st.spent = stretchSpent(st);
-  if (i >= steps.length) { st.end = null; stretchFinish(); return; }
-  const otherSide = i > 0 && steps[i - 1].guide === steps[i].guide;
-  st.i = i; st.end = Date.now() + steps[i].secs * 1000; st.paused = false;
+  if (i >= plan.length) { st.end = null; stretchFinish(); return; }
+  const otherSide = i > 0 && plan[i - 1].guide === plan[i].guide;
+  st.i = i; st.end = Date.now() + plan[i].secs * 1000; st.paused = false;
   beep(otherSide ? 520 : 660, 200, otherSide ? 2 : 1);
   openSheet(stretchSheet());
 }
 function stretchFinish() {
   const st = S.ui.st;
   if (!st || st.done) return;
-  const mins = Math.max(1, Math.round(stretchSpent(st) / 60000));
-  S.data.stretch = Object.assign({}, S.data.stretch, { [today()]: stretchMins(today()) + mins });
-  save('stretch');
+  const ms = stretchSpent(st);
+  const mins = ms < 30000 ? 0 : Math.max(1, Math.round(ms / 60000));
+  if (mins) {
+    S.data.stretch = Object.assign({}, S.data.stretch, { [today()]: stretchMins(today()) + mins });
+    save('stretch');
+  }
   st.done = true; st.mins = mins;
-  beep(880, 200, 3);
+  if (mins) beep(880, 200, 3);
   keepAwake(false);
   openSheet(stretchSheet());
   render();
@@ -443,8 +460,20 @@ function stretchKeep() {
 }
 ACTIONS['stretch-start'] = () => {
   audioOn(); keepAwake(true);
-  S.ui.st = { i: 0 };
+  const warm = justTrained();
+  S.ui.st = { i: 0, plan: stretchPlan(warm), warm };
   stretchGo(0);
+};
+ACTIONS['stretch-skip-warm'] = () => {
+  const st = S.ui.st;
+  if (!st || st.done) return;
+  stretchGo(st.plan.findIndex((x) => !x.warm));
+};
+// From the post-workout sheet: save the effort and note, then stretch while still warm.
+ACTIONS['stretch-now'] = (el) => {
+  const f = el.closest('form');
+  if (f) FORMS['session-note'](f);
+  ACTIONS['stretch-start']();
 };
 ACTIONS['stretch-next'] = () => { if (S.ui.st && !S.ui.st.done) stretchGo(S.ui.st.i + 1); };
 ACTIONS['stretch-pause'] = () => {
@@ -485,7 +514,7 @@ ACTIONS.finish = () => {
       ups.push(BB.LADDERS[pat].label + ': ' + BB.levelDef(pat, e.lvl + 1).name);
     }
   });
-  const session = { date: d.date, kind: d.kind, finisher: d.finisher, rounds: d.roundsDone, mins: Math.max(1, Math.round((Date.now() - d.started) / 60000)), warmup: !!d.warmup, ex };
+  const session = { date: d.date, kind: d.kind, finisher: d.finisher, rounds: d.roundsDone, mins: Math.max(1, Math.round((Date.now() - d.started) / 60000)), warmup: !!d.warmup, endedAt: Date.now(), ex };
   S.data.sessions = S.data.sessions.concat(session);
   save('sessions');
   if (ups.length) save('profile');
@@ -503,7 +532,9 @@ ACTIONS.finish = () => {
     '<form data-form="session-note" style="display:flex;flex-direction:column;gap:14px"><div class="field"><label>How hard was it?</label><div class="chips" data-group="effort">' +
     EFFORT.map((x, i) => '<button type="button" class="chip" data-act="pick" data-v="' + (i + 1) + '">' + x + '</button>').join('') + '</div></div>' +
     '<div class="field"><label for="sn-note">Note for your log (optional)</label><textarea class="input" id="sn-note" placeholder="Felt strong, left knee a bit sore, slept badly…"></textarea></div>' +
-    '<button class="btn block" type="submit">Done</button></form>');
+    '<button class="btn block" type="submit">Done</button>' +
+    '<button class="btn line block" type="button" data-act="stretch-now">Save and stretch now · ' + BB.STRETCH_MINS + ' min</button>' +
+    '<p class="small muted">Right after training is the best time to stretch: you are already warm, so it skips the warm-up.</p></form>');
 };
 FORMS['session-note'] = (f) => {
   const s = S.data.sessions[S.data.sessions.length - 1];

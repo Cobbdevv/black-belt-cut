@@ -208,7 +208,7 @@ function reminderEvents() {
   const app = String(location.href || '').split('#')[0];
   return [
     { id: 'train', title: 'Black Belt Cut: workout', details: 'Your 40-minute workout. Open the app: ' + app + '#train', from: today(), days: (p.trainDays || [0, 2, 4]).slice(), time: r.train, mins: 45 },
-    { id: 'stretch', title: 'Black Belt Cut: stretch', details: '9 minutes for your hips and kicks: ' + app + '#today', from: today(), days: null, time: r.stretch, mins: 10 },
+    { id: 'stretch', title: 'Black Belt Cut: stretch', details: 'A 3-minute warm-up, then ' + BB.STRETCH_MINS + ' minutes for your hips and kicks: ' + app + '#today', from: today(), days: null, time: r.stretch, mins: 15 },
   ];
 }
 function remindersCard() {

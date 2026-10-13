@@ -183,15 +183,20 @@ assert.doesNotMatch(sheet(), /Promotion/);
 ok('a corrected starting weight replaces the guessed weigh-in and never fakes a belt promotion');
 
 // 14. Stretching: the guided routine switches sides on the timer, logs real minutes, and shows up in the log
-run(`closeSheet(); S.data.stretch = {}; S.ui.tab = 'today'; render();`);
+run(`closeSheet(); S.data.stretch = {}; S.data.sessions.forEach((s) => { if (s.endedAt) s.endedAt = Date.now() - 7200000; }); S.ui.tab = 'today'; render();`);
 assert.match(view(), /Start stretching/); assert.match(view(), /0 of 7 days this week/);
 run(`ACTIONS['stretch-start']()`);
+assert.match(sheet(), /Warm-up · 1 of 4/); assert.match(sheet(), /Skip the warm-up/); clean(sheet(), 'stretch warm-up');
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+assert.match(sheet(), /Warm-up · 2 of 4/);
+run(`ACTIONS['stretch-skip-warm']()`);
+assert.strictEqual(run('S.ui.st.spent'), 0); // warm-up time is not stretching time
 assert.match(sheet(), /Stretch · 1 of 13/); assert.match(sheet(), /Lying hamstring stretch · Left/); assert.match(sheet(), /data-fg="hamstring-stretch"/); clean(sheet(), 'stretch');
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
 assert.match(sheet(), /Lying hamstring stretch · Right/);
 run('closeSheet()');
 assert.strictEqual(run('S.ui.st'), null); assert.strictEqual(run('Object.keys(S.data.stretch).length'), 0); // closing mid-way stops without logging
-run(`ACTIONS['stretch-start']()`);
+run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
 run('S.ui.st.end = Date.now() + 45000 - 120000'); // as if two minutes passed on the first stretch
 for (let i = 0; i < 13; i++) run(`ACTIONS['stretch-next']()`);
 assert.match(sheet(), /Done/);
@@ -207,12 +212,34 @@ ok('stretching: guided routine with side switches, honest minutes, closing stops
 
 // 15. Closing the stretch routine after a minute or more keeps the time; under a minute it logs nothing
 run(`closeSheet(); S.data.stretch = {};`);
-run(`ACTIONS['stretch-start']()`);
+run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 45-second holds done
 run('closeSheet()');
 assert.strictEqual(run('S.data.stretch[today()]'), 2); // 90 s rounds to 2 minutes
 ok('closing the stretch routine early keeps the minutes already done');
+
+// 15b. Warm-ups everywhere: short workouts start with one; stretching skips it right after training
+run(`closeSheet(); DRAFT = null; saveDraft(); ACTIONS.start({ dataset: { kind: 'short' } })`);
+assert.deepStrictEqual(JSON.parse(run('JSON.stringify(sessionSteps(DRAFT))')), ['warmup', 'squat', 'push', 'pull', 'finisher']);
+assert.match(view(), /Start warm-up/); assert.match(view(), /Short workout/);
+run(`DRAFT = Object.assign(DRAFT, { step: 1, warmup: false }); delete DRAFT.v; saveDraft();`); // a short workout from before this change, on its first exercise
+run('workoutDraft()');
+assert.strictEqual(run('DRAFT.step'), 2); assert.strictEqual(run('DRAFT.warmup'), true); // it keeps its place
+run(`DRAFT.ex.squat.done = DRAFT.ex.squat.done.map(() => true); ACTIONS.finish()`);
+assert.match(sheet(), /Save and stretch now/);
+assert.ok(run('S.data.sessions[S.data.sessions.length - 1].endedAt') > 0);
+run(`ACTIONS['stretch-now']({ closest: () => (${form.toString()})({ '#sn-note': 'Quick one' }, { effort: 2 }) })`);
+assert.strictEqual(run('S.data.sessions[S.data.sessions.length - 1].note'), 'Quick one');
+assert.match(sheet(), /Stretch · 1 of 13/); assert.match(sheet(), /You just trained/); assert.doesNotMatch(sheet(), /Warm-up · /);
+run(`ACTIONS['stretch-end']()`);
+assert.match(sheet(), /Stopped/); assert.match(sheet(), /Less than 30 seconds of stretching/); // nothing logged, and the copy says why
+const oldShort = run(`LOGBOOK.text({ profile: S.data.profile, sessions: [{ date: today(), kind: 'short', warmup: false, rounds: 1, mins: 13, ex: {} }] }, { today: today(), days: 7 })`);
+assert.ok(!oldShort.includes('no warm-up'), 'short workouts from before warm-ups existed are not flagged');
+const newShort = run(`LOGBOOK.text({ profile: S.data.profile, sessions: [{ date: today(), kind: 'short', warmup: false, endedAt: Date.now(), rounds: 1, mins: 13, ex: {} }] }, { today: today(), days: 7 })`);
+assert.ok(newShort.includes('no warm-up'), 'a skipped warm-up on a new short workout is flagged');
+run('closeSheet()');
+ok('warm-ups: short workouts get one, old drafts keep their place, stretching after a workout skips it');
 
 // 16. Questism-style status window: tier colour class, rank letter and a 7-segment bar
 run(`S.ui.tab = 'status'; render();`);

@@ -36,7 +36,7 @@
       const name = BB.FINISHERS[s.finisher] ? BB.FINISHERS[s.finisher].name.toLowerCase() : 'rounds';
       parts.push(s.rounds + ' ' + (s.rounds === 1 ? name.replace(/s$/, '') : name));
     }
-    if (s.kind === 'full' && s.warmup === false) parts.push('no warm-up');
+    if ((s.kind === 'full' || (s.kind === 'short' && s.endedAt)) && s.warmup === false) parts.push('no warm-up');
     if (s.note) parts.push('note: ' + quote(s.note));
     return '- ' + parts.join(' · ');
   }

@@ -286,7 +286,7 @@ function viewToday() {
   if (S.ui.readOnly) out.push('<p class="banner">Sync was refused, so changes only save on this device. Check the Firestore rules (README, step 4).</p>');
   if (gap >= 3 && p.comebackDismissed !== t) {
     out.push('<div class="card accent"><div class="eyebrow">Welcome back</div><h2>' + gap + ' days away. The plan is still here.</h2>' +
-      '<p class="small">No catching up and no penalty. Today, do one thing: the 12-minute short workout, or one meal with the plate rules.</p>' +
+      '<p class="small">No catching up and no penalty. Today, do one thing: the 15-minute short workout, or one meal with the plate rules.</p>' +
       '<div class="row"><button class="btn grow" data-act="start" data-kind="short" type="button">Start short workout</button>' +
       '<button class="btn line grow" data-act="dismiss-comeback" type="button">Just log today</button></div></div>');
   } else if (BB.missedYesterday(S.data.habits, act, t, p.startDate)) {
@@ -328,7 +328,7 @@ function workoutCard() {
   let buttons = '';
   if (draft) buttons = '<button class="btn grow" data-act="go" data-v="train" type="button">Resume workout</button>';
   else if (!doneToday) buttons = '<button class="btn grow' + (primary ? '' : ' line') + '" data-act="start" data-kind="full" type="button">Start workout</button>' +
-    '<button class="btn ghost grow" data-act="start" data-kind="short" type="button">Short · 12 min</button>';
+    '<button class="btn ghost grow" data-act="start" data-kind="short" type="button">Short · 15 min</button>';
   return '<div class="card"><div class="card-head"><h2>' + title + '</h2><span class="small muted">' + week.length + ' of 3 this week</span></div>' +
     '<p class="small">' + sub + '</p><div class="week">' + dots + '</div>' +
     (buttons ? '<div class="row">' + buttons + '</div>' : '') +

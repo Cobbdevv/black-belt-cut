@@ -55,7 +55,7 @@ Edit a file on GitHub (pencil, then Commit), or clone the repo with git. The sit
 **Who it's for:** an 18-year-old man, 175 cm, about 100 kg at the start (October 2026). His goal is 70–75 kg in a year while keeping muscle.
 - **Training:** bodyweight only, at home, 3 times a week. He has 6 months of kickboxing and 2 years of self-taught taekwondo.
 - **Food:** he eats what his mother cooks, refuses salads and won't count calories, so the app uses plate and hand-portion rules plus daily habit checkboxes.
-- **Failure modes he described:** he can't stop eating, he stops at random, and he loses motivation. Every feature targets one of these: the craving timer, streaks that allow one missed day, the comeback card, the 12-minute short workout, the extra rule offered after a 2-week stall, belts and ranks.
+- **Failure modes he described:** he can't stop eating, he stops at random, and he loses motivation. Every feature targets one of these: the craving timer, streaks that allow one missed day, the comeback card, the 15-minute short workout (warm-up included), the extra rule offered after a 2-week stall, belts and ranks.
 
 **Stat ranks (ranks.js):** 21 steps from F- to S+. C is roughly average for his age, A is athletic, S is elite.
 - STR is max push-ups, DUR is max plank, SPD is roundhouse kicks in 30 seconds, and END is burpees in 3 minutes. Each keeps his best trial result.
