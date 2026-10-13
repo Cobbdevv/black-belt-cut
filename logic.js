@@ -254,8 +254,45 @@
     return dates.length ? dates.sort()[dates.length - 1] : null;
   }
 
+  // ---------- Calendar reminders: the phone's calendar does the nagging, so the app needs no server ----------
+  const BYDAY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  // First date on or after `from` whose weekday is in `days` (0 = Monday).
+  function nextWeekday(from, days) {
+    for (let i = 0; i < 7; i++) { const d = addDays(from, i); if (days.includes(dow(d))) return d; }
+    return from;
+  }
+  const stamp = (date, time) => date.replace(/-/g, '') + 'T' + time.replace(':', '') + '00';
+  function endStamp(date, time, mins) {
+    const [h, m] = time.split(':').map(Number), total = h * 60 + m + mins, r = total % 1440;
+    return stamp(addDays(date, Math.floor(total / 1440)), pad(Math.floor(r / 60)) + ':' + pad(r % 60));
+  }
+  // ev: { id, title, details, from: 'YYYY-MM-DD', days: [weekday...] or null for every day, time: 'HH:MM', mins }
+  const firstOf = (ev) => (ev.days ? nextWeekday(ev.from, ev.days) : ev.from);
+  const ruleOf = (ev) => 'RRULE:FREQ=' + (ev.days ? 'WEEKLY;BYDAY=' + ev.days.slice().sort().map((d) => BYDAY[d]).join(',') : 'DAILY');
+  // A Google Calendar "add event" link that repeats on the chosen days.
+  function gcalLink(ev, tz) {
+    const first = firstOf(ev);
+    const q = ['action=TEMPLATE', 'text=' + encodeURIComponent(ev.title), 'dates=' + stamp(first, ev.time) + '/' + endStamp(first, ev.time, ev.mins),
+      'recur=' + encodeURIComponent(ruleOf(ev)), 'details=' + encodeURIComponent(ev.details || '')];
+    if (tz) q.push('ctz=' + encodeURIComponent(tz));
+    return 'https://calendar.google.com/calendar/render?' + q.join('&');
+  }
+  // The same events as an .ics file with a 10-minute alarm, for Apple, Outlook and other calendar apps.
+  function icsText(events, nowUtc) {
+    const text = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    const fold = (line) => { const out = []; while (line.length > 74) { out.push(line.slice(0, 74)); line = ' ' + line.slice(74); } out.push(line); return out.join('\r\n'); };
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Black Belt Cut//Reminders//EN', 'CALSCALE:GREGORIAN'];
+    events.forEach((ev) => {
+      const first = firstOf(ev);
+      lines.push('BEGIN:VEVENT', 'UID:bbc-' + ev.id + '-' + nowUtc + '@black-belt-cut', 'DTSTAMP:' + nowUtc, 'DTSTART:' + stamp(first, ev.time), 'DTEND:' + endStamp(first, ev.time, ev.mins),
+        ruleOf(ev), 'SUMMARY:' + text(ev.title), 'DESCRIPTION:' + text(ev.details), 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + text(ev.title), 'TRIGGER:-PT10M', 'END:VALARM', 'END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.map(fold).join('\r\n') + '\r\n';
+  }
+
   const BB = {
-    ymd, parseYmd, addDays, daysBetween, dow, weekStart, DAY_NAMES, niceDate,
+    ymd, parseYmd, addDays, daysBetween, dow, weekStart, DAY_NAMES, niceDate, nextWeekday, gcalLink, icsText,
     BELTS, beltIndex, beltState,
     trendSeries, latestTrend, slopePerWeek, projectGoalDate, isStalled,
     BASE_HABITS, LEVERS, activeHabits, goodDayNeed, dayDone, isGoodDay, habitStreak, missedYesterday,

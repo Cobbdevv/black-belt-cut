@@ -1,6 +1,6 @@
 /* Black Belt Cut — offline support. Online: always fetch fresh files (so updates show up right away) and keep a copy.
    Offline: serve the saved copy. Login and sync traffic is never cached. */
-const CACHE = 'bbc-v4';
+const CACHE = 'bbc-v5';
 const SHELL = ['./', 'index.html', 'logic.js', 'ranks.js', 'figure.js', 'moves.js', 'logbook.js', 'firebase-config.js', 'app.js', 'sync.js', 'train.js', 'status.js', 'views.js',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 

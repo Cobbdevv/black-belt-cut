@@ -521,6 +521,165 @@
     avoid: 'Kicking at full power before you are warm. Control first, then speed.',
   });
 
+  // ---------- Techniques: every entry in the 20-technique list gets its own how-to ----------
+  // Guard hands expressed relative to the shoulders, so they stay at the chin while the body turns or travels.
+  const fF = FG.solve(guard).F;
+  const toW = (pt, sh, s) => { const o = [pt[0] - sh[0], pt[1] - sh[1], pt[2] - sh[2]]; return { w: [o[0] * fF.fwd[0] + o[2] * fF.fwd[2], o[1], (o[0] * fF.side[0] + o[2] * fF.side[2]) * s] }; };
+  const guardW = set(guard, { hands: [toW(GUARD[0], shN, 1), toW(GUARD[1], shF, -1)] });
+  const LEAD = FIGHT.feet[1];
+  const HIGH_VIEW = [-50, -8, 84, 126];
+  // Spins add 360° of yaw; while the last key eases back into the first, hold its yaw so the figure never unwinds.
+  const spin = (move, yaw) => { const last = move.keys.length - 1; move.mod = (p) => { if (p.key === last) p.yaw = yaw; }; return move; };
+  const label = (from, to, text) => ({ from, to, text, at: [44, 98] });
+
+  const chamberTP = set(guard, Object.assign({ torso: 98 }, rearLift([8, 36, 6], -30)));
+  const teep = set(guard, Object.assign({ torso: 112, hip: [4, 48.5] }, rearLift([46, 42, 3], 55)));
+  add('teep', {
+    name: 'Push kick (teep)', view: KICK_VIEW, dur: 1.8, props: [FLOOR],
+    keys: [{ t: 0, p: guard, f: 'Stance' }, { t: 0.3, p: chamberTP, hi: ['lN'], f: 'Knee up' }, { t: 0.55, p: teep, hi: ['lN'], f: 'Hips through, ball of the foot' }, { t: 0.75, p: teep, hi: ['lN'] }, { t: 1.0, p: chamberTP, hi: ['lN'] }, { t: 1.3, p: guard }],
+    cues: [{ from: 0.45, to: 0.9, arrow: [12, 0], at: 'hip', off: [-4, 8], text: 'HIPS FORWARD', lx: [-30, 7] }],
+    steps: ['Fighting stance, hands up.', 'Lift the knee straight up in front of you.', 'Push your hips forward and drive the ball of the foot into the target, like shoving a door open.', 'Pull it back to the knee, then land in stance.'],
+    avoid: 'Leaning so far back that you lose your balance.',
+  });
+
+  const chamberSK = set(guardW, Object.assign({ yaw: 30, torso: 100 }, rearLift([8, 36, 8], -60)));
+  const sideKick = set(guardW, Object.assign({ yaw: 80, torso: 124, hip: [-3, 48] }, rearLift([48, 53, 0], -95)));
+  add('side-kick', {
+    name: 'Side kick', view: KICK_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.35, p: chamberSK, hi: ['lN'], f: 'Knee up, turn side-on' }, { t: 0.62, p: sideKick, hi: ['lN'], f: 'Heel drives out' }, { t: 0.8, p: sideKick, hi: ['lN'] }, { t: 1.08, p: chamberSK, hi: ['lN'] }, { t: 1.45, p: guardW }],
+    cues: [{ from: 0.55, to: 0.95, line: ['hpN', 'anN'], text: 'HIP · KNEE · HEEL', side: [0, 1] }],
+    steps: ['Fighting stance, hands up.', 'Lift the rear knee and turn side-on, pivoting the standing foot until its heel points at the target.', 'Drive the heel straight out at waist height, with hip, knee and heel in one line.', 'Pull the knee back to the chamber, then land in stance.'],
+    avoid: 'Toes pointing up, or a bent knee at impact.',
+  });
+
+  const chamberHR = set(guardW, Object.assign({ yaw: 14, torso: 102 }, rearLift([-2, 46, 16], -30)));
+  const highRH = set(guardW, Object.assign({ yaw: 64, torso: 128, hip: [0, 49] }, rearLift([38, 80, 2], 5)));
+  add('high-roundhouse', {
+    name: 'Head-height roundhouse', view: HIGH_VIEW, dur: 2, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.38, p: chamberHR, hi: ['lN'], f: 'Knee up, pivot' }, { t: 0.66, p: highRH, hi: ['lN'], f: 'Lean back, shin to head height' }, { t: 0.84, p: highRH, hi: ['lN'] }, { t: 1.12, p: chamberHR, hi: ['lN'] }, { t: 1.48, p: guardW }],
+    cues: [{ from: 0.3, to: 1.0, trail: ['toeN', 0.2, 0.66] }, { from: 0.55, to: 1.0, text: 'HEAD HEIGHT', at: [46, 100] }],
+    steps: ['Fighting stance, hands up.', 'Bring the knee up and pivot on your standing foot until the heel points at the target.', 'Turn the hip over and lean back as the shin snaps through at head height.', 'Pull it back and land in stance, hands up the whole time.'],
+    avoid: 'Swinging a straight leg up, or dropping your hands to balance.',
+  });
+
+  const axeUp = set(guardW, Object.assign({ yaw: -30, torso: 104 }, rearLift([22, 84, 4], 40)));
+  const axeTop = set(guardW, Object.assign({ yaw: -20, torso: 110, hip: [-2, 48.5] }, rearLift([14, 93, 4], 75)));
+  const axeDown = set(guardW, Object.assign({ yaw: -30, torso: 98, hip: [1, 47.5] }, rearLift([40, 58, 3], -25)));
+  const axeLow = set(guardW, Object.assign({ yaw: -40, torso: 94 }, rearLift([30, 16, 3], -20)));
+  add('axe-kick', {
+    name: 'Axe kick', view: HIGH_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.3, p: axeUp, hi: ['lN'], f: 'Leg swings up, nearly straight' }, { t: 0.55, p: axeTop, hi: ['lN'], f: 'Up past your head' }, { t: 0.8, p: axeDown, hi: ['lN'], f: 'Heel drops through' }, { t: 1.0, p: axeLow, hi: ['lN'] }, { t: 1.3, p: guardW }],
+    cues: [{ from: 0.55, to: 0.95, arrow: [0, -16], at: 'anN', off: [7, 4], text: 'HEEL DOWN', lx: [3, -2] }],
+    steps: ['Fighting stance, hands up.', 'Swing the leg up fairly straight, just outside the target, as high as you can control.', 'At the top, drop it down hard and strike with the heel.', 'Land in stance with your hands still up.'],
+    avoid: 'Bending the knee on the way down, or leaning back so far that you fall.',
+  });
+
+  const bkTurn = set(guardW, { yaw: 60, torso: 94, feet: [[-10, B.ankle, 8], LEAD], toes: [-16, -16] });
+  const bkChamber = set(guardW, { yaw: 128, torso: 82, feet: [[2, 36, 2], LEAD], toes: [-70, -16] });
+  const bkKick = set(guardW, { yaw: 128, torso: 64, hip: [-2, 47], feet: [[42, 48, 0], LEAD], toes: [-100, -16] });
+  add('back-kick', {
+    name: 'Back kick', view: KICK_VIEW, dur: 2.1, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.3, p: bkTurn, f: 'Turn, look over your shoulder' }, { t: 0.52, p: bkChamber, hi: ['lN'], f: 'Knee up, back to the target' }, { t: 0.75, p: bkKick, hi: ['lN'], f: 'Heel straight back' }, { t: 0.95, p: bkKick, hi: ['lN'] }, { t: 1.2, p: bkChamber, hi: ['lN'] }, { t: 1.5, p: bkTurn }],
+    cues: [{ from: 0.65, to: 1.05, arrow: [12, 0], at: 'anN', off: [2, 8], text: 'STRAIGHT BACK', lx: [-24, 7] }],
+    steps: ['Fighting stance, hands up.', 'Turn your back to the target, pivoting on the front foot, and look over your shoulder.', 'Lift the rear knee, then drive the heel straight back at the target, toes pointing down.', 'Pull the knee back and turn to face front in stance.'],
+    avoid: 'Swinging the leg out to the side instead of straight back.',
+  });
+
+  const swAir = set(guardW, { hip: [0, 50.5], feet: [[0, 9, 7], [2, 9, -6]], toes: [-40, -40] });
+  const swStance = set(guardW, { feet: [[13, B.ankle, 7], [-12, B.ankle, -6]], toes: two(-16) });
+  const swChamber = set(guardW, { yaw: 10, torso: 98, feet: [[13, B.ankle, 7], [0, 40, -14]], toes: [-16, -30] });
+  const swKick = set(guardW, { yaw: 60, torso: 112, hip: [2, 48], feet: [[13, B.ankle, 7], [44, 54, -2]], toes: [-16, 0] });
+  add('switch-kick', {
+    name: 'Switch kick', view: KICK_VIEW, dur: 2.1, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.15, p: swAir }, { t: 0.3, p: swStance, f: 'Quick switch' }, { t: 0.5, p: swChamber, hi: ['lF'] }, { t: 0.72, p: swKick, hi: ['lF'], f: 'Lead-leg roundhouse' }, { t: 0.88, p: swKick, hi: ['lF'] }, { t: 1.1, p: swChamber, hi: ['lF'] }, { t: 1.35, p: swStance }, { t: 1.5, p: swAir }, { t: 1.68, p: guardW }],
+    cues: [label(0.05, 0.4, 'SWITCH'), { from: 0.45, to: 1.0, trail: ['toeF', 0.5, 0.72] }],
+    steps: ['Fighting stance, hands up.', 'Switch your feet with a quick, small hop: the lead foot goes back and the rear foot comes forward.', 'Use the bounce to kick a roundhouse with the leg that was in front, turning the hip over.', 'Land and switch back to your normal stance.'],
+    avoid: 'A big jump that tells your opponent the kick is coming.',
+  });
+
+  const chamberLK = set(guard, Object.assign({ yaw: 0, torso: 97 }, rearLift([-4, 26, 14], -30)));
+  const lowKick = set(guard, Object.assign({ yaw: 44, torso: 106, hip: [2, 47.5] }, rearLift([38, 20, 4], -8)));
+  add('combo', {
+    name: 'Jab, cross, hook, low kick', view: KICK_VIEW, dur: 2.6, props: [FLOOR],
+    keys: [{ t: 0, p: guard, f: 'Guard' }, { t: 0.15, p: jab, hi: ['aF'], f: 'Jab' }, { t: 0.35, p: guard }, { t: 0.52, p: cross, hi: ['aN'], f: 'Cross' }, { t: 0.75, p: guard }, { t: 0.92, p: hook, hi: ['aF'], f: 'Hook' }, { t: 1.15, p: guard },
+      { t: 1.35, p: chamberLK, hi: ['lN'] }, { t: 1.55, p: lowKick, hi: ['lN'], f: 'Low kick' }, { t: 1.7, p: lowKick, hi: ['lN'] }, { t: 2.0, p: guard }],
+    cues: [label(0.05, 0.35, 'JAB'), label(0.4, 0.75, 'CROSS'), label(0.8, 1.15, 'HOOK'), label(1.25, 1.95, 'LOW KICK'), { from: 1.4, to: 1.95, trail: ['toeN', 1.35, 1.55] }],
+    steps: ['Jab: snap the lead hand straight out and back.', 'Cross: turn the back hip and drive the rear hand through.', 'Hook: lead elbow up, pivot on the lead foot.', 'Low kick: turn the rear hip over and swing the shin into the thigh, then straight back to guard.'],
+    avoid: 'Pausing between strikes, or dropping your hands on the kick.',
+  });
+
+  const fw = (hx, near, far) => set(guardW, { hip: [hx, 47.5], feet: [near, far] });
+  const N0 = FIGHT.feet[0];
+  add('footwork', {
+    name: 'Footwork', view: KICK_VIEW, dur: 2.4, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.22, p: fw(5, N0, [24, 5, -6]) }, { t: 0.4, p: fw(8, N0, [30, B.ankle, -6]), f: 'Lead foot steps first' }, { t: 0.6, p: fw(13, [-4, 4, 7], [30, B.ankle, -6]) },
+      { t: 0.75, p: fw(16, [3, B.ankle, 7], [30, B.ankle, -6]), f: 'Rear foot follows' }, { t: 1.1, p: fw(16, [3, B.ankle, 7], [30, B.ankle, -6]) }, { t: 1.3, p: fw(11, [-6, 4, 7], [30, B.ankle, -6]) },
+      { t: 1.45, p: fw(8, N0, [30, B.ankle, -6]), f: 'Back: rear foot first' }, { t: 1.65, p: fw(3, N0, [21, 4, -6]) }, { t: 1.8, p: guardW }],
+    cues: [label(0.1, 0.85, 'FORWARD'), label(1.2, 1.9, 'BACK')],
+    steps: ['Fighting stance, hands up, weight on the balls of your feet.', 'Forward: the lead foot steps first, then the rear foot follows the same distance.', 'Back: the rear foot steps first, then the lead foot follows.', 'Keep the same stance width on every step and never cross your feet.'],
+    avoid: 'Crossing your feet, bouncing high, or letting your stance get narrow.',
+  });
+
+  const slip = set(guardW, { hip: [2, 44], torso: 72, twist: 28 });
+  const rollDown = set(guardW, { hip: [-1, 38.5], torso: 66 });
+  const rollUp = set(guardW, { hip: [1, 44], torso: 100, twist: -16 });
+  add('slip-roll', {
+    name: 'Slip and roll', view: KICK_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Guard' }, { t: 0.25, p: slip, f: 'Slip: head off the line' }, { t: 0.5, p: guardW }, { t: 0.85, p: rollDown, f: 'Roll: knees bend, head in a U' }, { t: 1.15, p: rollUp }, { t: 1.4, p: guardW }],
+    cues: [label(0.05, 0.5, 'SLIP'), label(0.6, 1.4, 'ROLL'), { from: 0.7, to: 1.4, trail: ['head', 0.5, 1.15] }],
+    steps: ['Guard up, eyes on the target.', 'Slip: turn your shoulders and dip your head just outside the straight punch, knees soft.', 'Roll: bend your knees and move your head in a U under the hook, coming up on the other side.', 'Hands stay at your chin and your eyes never leave the target.'],
+    avoid: 'Bending at the waist or looking at the floor.',
+  });
+
+  const shTurn = set(guardW, { yaw: 80, torso: 96, feet: [[-8, B.ankle, 10], LEAD], toes: [-16, -16] });
+  // Turned away from the target, so leaning away from it means leaning "forward" in the body's own frame (torso under 90).
+  const shOut = set(guardW, { yaw: 150, torso: 52, hip: [-2, 47.5], feet: [[40, 74, -4], LEAD], toes: [10, -16] });
+  const shHook = set(guardW, { yaw: 210, torso: 58, hip: [-2, 47.5], feet: [[24, 78, -22], LEAD], toes: [10, -16] });
+  const shRecover = set(guardW, { yaw: 262, torso: 96, feet: [[-10, 28, 6], LEAD], toes: [-30, -16] });
+  add('spin-hook', spin({
+    name: 'Spinning hook kick', view: HIGH_VIEW, dur: 1.8, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.28, p: shTurn, f: 'Spin, look over your shoulder' }, { t: 0.55, p: shOut, hi: ['lN'], f: 'Leg sweeps at head height' }, { t: 0.72, p: shHook, hi: ['lN'], f: 'Heel hooks through' }, { t: 1.0, p: shRecover }, { t: 1.3, p: set(guardW, { yaw: 308 }), f: 'Land in stance' }],
+    cues: [label(0.15, 0.5, 'LOOK'), { from: 0.45, to: 0.95, trail: ['toeN', 0.42, 0.75] }],
+    steps: ['Fighting stance, hands up.', 'Spin backward on your front foot and look over your shoulder at the target.', 'Swing the rear leg around at head height, bending the knee so the heel hooks through.', 'Keep turning and land back in stance, hands up.'],
+    avoid: 'Spinning without looking first, or kicking before your hips have turned.',
+  }, 308));
+
+  const jfAir = set(guardW, { hip: [3, 57], feet: [[-4, 16, 7], [10, 22, -6]], toes: [-50, -40] });
+  const jfKick = set(guardW, { hip: [4, 60], torso: 104, feet: [[48, 60, 3], [8, 26, -6]], toes: [35, -40] });
+  const jfBack = set(guardW, { hip: [3, 53], feet: [[10, 30, 5], [12, 9, -6]], toes: [-40, -30] });
+  add('jump-front-kick', {
+    name: 'Jumping front kick', view: HIGH_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.28, p: set(guardW, { hip: [0, 43] }), f: 'Dip' }, { t: 0.48, p: jfAir, f: 'Jump, knee up' }, { t: 0.66, p: jfKick, hi: ['lN'], f: 'Kick at the top' }, { t: 0.86, p: jfBack }, { t: 1.06, p: set(guardW, { hip: [1, 44.5] }), f: 'Land softly' }, { t: 1.4, p: guardW }],
+    cues: [{ from: 0.5, to: 0.95, trail: ['toeN', 0.48, 0.66] }],
+    steps: ['Fighting stance, hands up.', 'Dip your knees and jump, driving the rear knee up high.', 'Snap the front kick out at the top of the jump, ball of the foot first.', 'Pull the foot back and land softly on both feet, knees bent.'],
+    avoid: 'Kicking on the way down, or landing with straight legs.',
+  });
+
+  const tdTurn = set(guardW, { yaw: 100, hip: [0, 44], feet: [[-6, B.ankle, 9], LEAD] });
+  const tdSpin = set(guardW, { yaw: 250, hip: [1, 58], feet: [[2, 32, 6], [6, 28, -6]], toes: [-40, -40] });
+  const tdChamber = set(guardW, { yaw: 370, torso: 100, hip: [2, 60], feet: [[2, 50, 14], [4, 26, -6]], toes: [-30, -40] });
+  const tdKick = set(guardW, { yaw: 420, torso: 112, hip: [2, 60], feet: [[44, 62, 2], [6, 28, -6]], toes: [0, -40] });
+  const tdOut = set(guardW, { yaw: 370, hip: [1, 52], feet: [[4, 38, 12], [10, 10, -6]], toes: [-30, -30] });
+  add('tornado', spin({
+    name: 'Tornado kick', view: HIGH_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.3, p: tdTurn, f: 'Step and turn your back' }, { t: 0.52, p: tdSpin, f: 'Jump and spin' }, { t: 0.7, p: tdChamber, hi: ['lN'] }, { t: 0.86, p: tdKick, hi: ['lN'], f: 'Roundhouse at the end of the spin' }, { t: 1.05, p: tdOut }, { t: 1.3, p: set(guardW, { yaw: 308, hip: [0, 46] }), f: 'Land in stance' }],
+    cues: [label(0.3, 0.62, 'SPIN'), label(0.68, 1.05, 'KICK'), { from: 0.72, to: 1.05, trail: ['toeN', 0.7, 0.86] }],
+    steps: ['Fighting stance, hands up.', 'Step across and turn your back to the target, then jump into the spin.', 'Keep turning in the air and finish the spin with a roundhouse from the rear leg.', 'Land on both feet in stance, hands up.'],
+    avoid: 'Opening the kick before the spin is finished.',
+  }, 308));
+
+  const f5Turn = set(guardW, { yaw: 128, hip: [0, 45], feet: [[-4, B.ankle, -8], LEAD] });
+  const f5Jump = set(guardW, { yaw: 260, hip: [2, 58], feet: [[-2, 30, 6], [12, 50, -6]], toes: [-40, -30] });
+  const f5Kick = set(guardW, { yaw: 420, torso: 112, hip: [2, 60], feet: [[44, 64, 2], [6, 34, -6]], toes: [0, -40] });
+  const f5Land = set(guardW, { yaw: 488, hip: [1, 46], feet: [[10, B.ankle, 6], [-12, 18, -6]], toes: [-16, -40] });
+  add('540-kick', spin({
+    name: '540 kick', view: HIGH_VIEW, dur: 1.9, props: [FLOOR],
+    keys: [{ t: 0, p: guardW, f: 'Stance' }, { t: 0.3, p: f5Turn, f: 'Turn your back and step' }, { t: 0.5, p: f5Jump, hi: ['lF'], f: 'Jump, front knee up' }, { t: 0.72, p: f5Kick, hi: ['lN'], f: 'Kick with the takeoff leg' }, { t: 0.95, p: f5Land, hi: ['lN'], f: 'Land on the kicking leg' }, { t: 1.35, p: set(guardW, { yaw: 668 }) }],
+    cues: [{ from: 0.62, to: 1.0, trail: ['toeN', 0.5, 0.72] }],
+    steps: ['Fighting stance, hands up.', 'Turn your back to the target and step, then jump off that foot, driving the other knee up.', 'Keep spinning and kick with the leg you jumped off, a roundhouse at head height.', 'Land on the kicking leg, then turn to face front in stance.'],
+    avoid: 'Trying it before your knees and spin are ready. Learn the tornado kick first.',
+  }, 668));
+
   // ---------- Warm-up ----------
   const mStand = { hip: [0, STAND], torso: 90, feet: two([3, B.ankle]), toes: two(FLAT), hands: ARMS_DOWN };
   const mKnee = (i) => {

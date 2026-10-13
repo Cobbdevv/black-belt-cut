@@ -70,6 +70,12 @@ Edit a file on GitHub (pencil, then Commit), or clone the repo with git. The sit
 
 **How-to guides:** `figure.js` is a small stick-figure rig with 3D joints and two-bone IK, drawn flat as SVG in the HUD colours. `moves.js` holds about 40 moves as keyframed poses with steps, a tempo bar and optional "wrong" frames. Every ladder level, finisher, warm-up move, test, technique and quest objective links a move by id (`guide`/`guides`). Workouts are step by step: guided 3-minute warm-up, then for each move its how-to and then its sets (ticking the last set jumps to the next how-to), then rounds, then an effort rating and a note. Under reduced motion the figures stay still.
 
+**Techniques:** all 20 techniques have their own how-to, including side kick, axe kick, back kick, switch kick, the jab-cross-hook-low-kick combo, footwork, slip and roll, and the jumping and spinning kicks. Spinning moves add 360° of yaw and use `spin(move, yaw)` so the loop never unwinds.
+
+**Rank colours (his request, October 2026):** Questism-style. Each tier has a colour (`--t-F` to `--t-S`: grey, silver, sand, green, cyan, orange, blood red), and the Status window shows each stat as a name plate, a rank letter and a 7-segment bar with one segment per tier (E fills 2, D 3, B 5; a minus fills the last segment halfway).
+
+**Reminders:** Guide → Reminders saves a workout time and a stretch time (`profile.reminders`). It builds repeating Google Calendar links (`BB.gcalLink`) and an .ics file with a 10-minute alarm (`BB.icsText`), so the phone's calendar does the reminding without a server.
+
 **Stretching:** `BB.STRETCH` is a daily 9-minute routine (hamstrings, hip flexors, glutes, inner thighs, then slow front and side leg raises for kick height). It holds 45 s per side every day, because 5 or more days a week and at least 5 minutes per muscle a week is where the bigger range-of-motion gains show up. The hamstring and butterfly holds use contract-relax. It runs as a guided sheet from Today or Train, logs the real minutes per day in `log/stretch`, and shows up in the Claude log. It doesn't count toward the 3 workouts a week.
 
 **Code layout:** plain HTML/CSS/JS with no build step.

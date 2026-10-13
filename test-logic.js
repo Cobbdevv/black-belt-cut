@@ -83,5 +83,23 @@ t('progression targets', () => {
   assert.strictEqual(BB.roundsTarget(new Array(12).fill({ kind: 'full' })), 5);
 });
 
+t('calendar reminders', () => {
+  assert.strictEqual(BB.nextWeekday('2026-10-13', [0, 2, 4]), '2026-10-14'); // Tuesday -> Wednesday
+  assert.strictEqual(BB.nextWeekday('2026-10-12', [0, 2, 4]), '2026-10-12'); // Monday is a training day
+  const ev = { id: 'train', title: 'Black Belt Cut: workout', details: 'Open the app', from: '2026-10-13', days: [4, 0, 2], time: '23:30', mins: 45 };
+  const link = BB.gcalLink(ev, 'Europe/Istanbul');
+  assert.ok(link.startsWith('https://calendar.google.com/calendar/render?action=TEMPLATE'));
+  assert.ok(link.includes('dates=20261014T233000/20261015T001500'), 'end time rolls over midnight');
+  assert.ok(link.includes('recur=' + encodeURIComponent('RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR')));
+  assert.ok(link.includes('ctz=Europe%2FIstanbul'));
+  const ics = BB.icsText([ev, { id: 'stretch', title: 'Stretch, 9 min', details: 'Hips; kicks', from: '2026-10-13', days: null, time: '21:00', mins: 10 }], '20261013T080000Z');
+  assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\n') && ics.endsWith('END:VCALENDAR\r\n'));
+  assert.strictEqual((ics.match(/BEGIN:VEVENT/g) || []).length, 2);
+  assert.ok(ics.includes('DTSTART:20261014T233000') && ics.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR'));
+  assert.ok(ics.includes('DTSTART:20261013T210000') && ics.includes('RRULE:FREQ=DAILY'));
+  assert.ok(ics.includes('TRIGGER:-PT10M') && ics.includes('SUMMARY:Stretch\\, 9 min') && ics.includes('Hips\\; kicks'));
+  assert.ok(ics.split('\r\n').every((l) => l.length <= 75), 'lines folded');
+});
+
 console.log(n + ' groups passed');
 

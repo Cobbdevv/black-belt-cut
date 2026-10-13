@@ -162,8 +162,8 @@ function viewGuide() {
   const days = p.trainDays || [0, 2, 4];
   return '<h1 class="section-title">Your plan</h1>' +
     '<div class="stats">' +
-    '<div class="stat"><span class="label">Calories</span><span class="value">~2,500</span><span class="sub">a day. No counting: the plate rules land you here</span></div>' +
-    '<div class="stat"><span class="label">Protein</span><span class="value">~150 g</span><span class="sub">a day, about 6 palm-sized portions</span></div>' +
+    '<div class="stat"><span class="label">Plates</span><span class="value">1 per meal</span><span class="sub">no seconds; your hands set the portion</span></div>' +
+    '<div class="stat"><span class="label">Protein</span><span class="value">2 palms</span><span class="sub">at every meal, about 6 a day</span></div>' +
     '<div class="stat"><span class="label">Pace</span><span class="value">0.5 kg</span><span class="sub">a week, about 25 kg in a year</span></div>' +
     '<div class="stat"><span class="label">Training</span><span class="value">3 × 40 min</span><span class="sub">a week, bodyweight, at home</span></div></div>' +
     '<div class="card guide"><h2>Build your plate with your hands</h2><p class="small">Your mom cooks, you portion. Your hand grows with you, so it is always the right size.</p>' +
@@ -190,7 +190,7 @@ function viewGuide() {
     '<div class="field"><label>Training days</label><div class="chips" data-group="days" data-multi="1">' + BB.DAY_NAMES.map((d, i) => '<button type="button" class="chip' + (days.includes(i) ? ' on' : '') + '" data-act="pick" data-v="' + i + '">' + d + '</button>').join('') + '</div></div>' +
     '<div class="field"><label for="st-start">Starting weight (kg)</label><input class="input" id="st-start" inputmode="decimal" autocomplete="off" value="' + esc(p.startWeight) + '">' +
     '<p class="small muted">Guessed it on day one? Enter your first real weigh-in here. It replaces the guess in your weigh-in log too.</p></div>' +
-    '<button class="btn" type="submit">Save settings</button></form>' +
+    '<button class="btn" type="submit">Save settings</button></form>' + remindersCard() +
     '<div class="card"><h2>Account and backup</h2>' +
     '<p class="small">' + (S.ui.auth === 'signed-in' ? 'Signed in as <b>' + esc(S.ui.email) + '</b>. Your log syncs to every device you sign in on, and keeps working offline.'
       : 'Sync is off, so your log is saved in this browser only.') + '</p>' +
@@ -202,6 +202,49 @@ function viewGuide() {
     '<div class="card quiet"><p class="small muted">Set three phone alarms for your training days so you never have to remember.</p>' +
     '<button class="btn line" type="button" data-act="reset">' + (S.ui.confirmReset ? 'Tap again to erase everything' : 'Start over') + '</button></div>';
 }
+// ---------- Reminders: repeating calendar events, so the phone nags even when the app is closed ----------
+function reminderEvents() {
+  const p = S.data.profile, r = Object.assign({ train: '18:00', stretch: '21:00' }, p.reminders);
+  const app = String(location.href || '').split('#')[0];
+  return [
+    { id: 'train', title: 'Black Belt Cut: workout', details: 'Your 40-minute workout. Open the app: ' + app + '#train', from: today(), days: (p.trainDays || [0, 2, 4]).slice(), time: r.train, mins: 45 },
+    { id: 'stretch', title: 'Black Belt Cut: stretch', details: '9 minutes for your hips and kicks: ' + app + '#today', from: today(), days: null, time: r.stretch, mins: 10 },
+  ];
+}
+function remindersCard() {
+  const ev = reminderEvents();
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { tz = ''; }
+  return '<form class="card" data-form="reminders"><div class="card-head"><h2>Reminders</h2><span class="small muted">your calendar does the nagging</span></div>' +
+    '<p class="small">Put your training days (' + ev[0].days.slice().sort().map((d) => BB.DAY_NAMES[d]).join(', ') + ') and a daily stretch in your calendar. Your phone then reminds you, even when the app is closed.</p>' +
+    '<div class="row"><div class="field grow"><label for="rm-train">Workout time</label><input class="input" id="rm-train" type="time" value="' + esc(ev[0].time) + '"></div>' +
+    '<div class="field grow"><label for="rm-stretch">Stretch time</label><input class="input" id="rm-stretch" type="time" value="' + esc(ev[1].time) + '"></div></div>' +
+    '<button class="btn line" type="submit">Save times</button>' +
+    '<div class="eyebrow">Add to Google Calendar</div>' +
+    '<div class="row"><a class="btn grow" href="' + esc(BB.gcalLink(ev[0], tz)) + '" target="_blank" rel="noopener">Workouts</a>' +
+    '<a class="btn grow" href="' + esc(BB.gcalLink(ev[1], tz)) + '" target="_blank" rel="noopener">Daily stretch</a></div>' +
+    '<button class="linkish" type="button" data-act="ics" style="align-self:flex-start">Other calendar app? Download a calendar file</button></form>';
+}
+FORMS.reminders = (f) => {
+  const tr = f.querySelector('#rm-train').value, st = f.querySelector('#rm-stretch').value;
+  if (!/^\d{2}:\d{2}$/.test(tr) || !/^\d{2}:\d{2}$/.test(st)) { toast('Pick both times first.'); return; }
+  S.data.profile.reminders = { train: tr, stretch: st };
+  save('profile');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  render();
+  toast('Times saved. Now add them to your calendar.');
+};
+ACTIONS.ics = () => {
+  const now = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const blob = new Blob([BB.icsText(reminderEvents(), now)], { type: 'text/calendar' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'black-belt-cut-reminders.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Calendar file downloaded. Open it to add the reminders.');
+};
+
 // Every animated move, grouped the way the workouts use them. Tap one for the full how-to.
 function libraryCard() {
   const lv = (pat) => BB.LADDERS[pat].levels.map((l) => l.guide);
@@ -209,6 +252,7 @@ function libraryCard() {
     ['Warm-up', BB.WARMUP.map((w) => w.guide).filter((g) => g !== 'boxing').concat('march')],
     ['Squat', lv('squat')], ['Push', lv('push')], ['Pull', lv('pull')], ['Hips', lv('hinge')], ['Core', lv('core')],
     ['Fighting', ['boxing', 'jab', 'cross', 'hook', 'uppercut', 'speed-punches', 'front-kick', 'roundhouse', 'knee-strike', 'kicks']],
+    ['Techniques', ['footwork', 'slip-roll', 'combo', 'teep', 'side-kick', 'switch-kick', 'axe-kick', 'back-kick', 'high-roundhouse', 'spin-hook', 'jump-front-kick', 'tornado', '540-kick']],
     ['Tests and quests', ['burpee', 'wall-sit']],
     ['Stretching', BB.STRETCH.map((s) => s.guide)],
   ];

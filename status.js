@@ -49,13 +49,21 @@ function statSub(k, s) {
   if (k === 'wil') return s.source === 'measuring' ? 'Ranks after 7 days of logs (day ' + s.days + ')' : Math.round(s.eat * 100) + '% good eating days, ' + Math.round(s.train * 100) + '% of workouts, last 28 days';
   return s.index >= 20 ? 'Fully awakened' : plural(s.clears, 'quest') + ' cleared · next step in ' + s.toNext;
 }
+// Questism-style rank bar: one segment per tier from F to S, so E fills 2, D 3, B 5. A minus rank fills its last segment halfway.
+const tierClass = (i) => (i == null ? 't-none' : 't-' + RK.tierOf(i));
+function rankBar(i) {
+  const tier = i == null ? -1 : Math.floor(i / 3), half = i != null && i % 3 === 0;
+  let segs = '';
+  for (let k = 0; k < 7; k++) segs += '<i style="--fill:' + (k < tier ? 100 : k === tier ? (half ? 50 : 100) : 0) + '%"></i>';
+  return '<span class="qs-bar" aria-hidden="true">' + segs + '</span>';
+}
 function statusWindow(st) {
   const rows = RK.STAT_KEYS.map((k) => {
-    const s = st[k], info = RK.STAT_INFO[k];
-    const bar = s.next && RK.TESTS[k] ? '<span class="sys-bar" aria-hidden="true"><i style="width:' + Math.round(Math.max(0, Math.min(1, s.progress)) * 100) + '%"></i></span>' : '';
-    return '<div class="sys-row"><span class="sys-code">' + info.code + '</span><span class="sys-name">' + info.name + '<small>' + esc(statSub(k, s)) + '</small>' + bar + '</span>' + rankBadge(s.index) + '</div>';
+    const s = st[k];
+    return '<div class="qs-row ' + tierClass(s.index) + '"><span class="qs-name">' + RK.STAT_INFO[k].name + '</span><span class="qs-rank">' + (s.index == null ? '?' : RK.rankName(s.index)) + '</span>' +
+      rankBar(s.index) + '<span class="qs-sub">' + esc(statSub(k, s)) + '</span></div>';
   }).join('');
-  return '<div class="sys"><div class="sys-head"><span>Status</span><span>Overall ' + RK.rankName(st.overall) + '</span></div>' + rows +
+  return '<div class="sys qs"><div class="sys-head"><span>Status</span><span>Overall <b class="qs-overall ' + tierClass(st.overall) + '">' + RK.rankName(st.overall) + '</b></span></div>' + rows +
     '<p class="sys-note">C is average for your age, A is athletic, S is elite. Trial ranks keep your best result. Willpower is the one that can drop.</p>' +
     '<button class="btn sys-btn" type="button" data-act="trial">Take a rank trial</button></div>';
 }
@@ -195,28 +203,29 @@ function timerCtl(k) {
 }
 function setTrialValue(k, v) {
   S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { [k]: String(v) });
-  document.querySelectorAll('#tr-' + k).forEach((i) => { i.value = String(v); });
+  document.querySelectorAll('.trial [name="' + k + '"]').forEach((i) => { i.value = String(v); });
 }
 function trialForm(prefill, where, month) {
   const draft = S.ui.trialDraft || {};
   return '<form data-form="trial" data-where="' + where + '"' + (month ? ' data-m="' + month + '"' : '') + ' class="trial">' + RK.TEST_KEYS.map((k) => {
     const t = RK.TESTS[k];
     const v = draft[k] != null ? draft[k] : prefill && typeof prefill[k] === 'number' ? fmtTest(k, prefill[k]) : '';
-    return '<div class="field trial-test"><div class="tt-head"><label for="tr-' + k + '">' + RK.STAT_INFO[k].code + ' · ' + t.test + (t.unit === 's' ? ' (m:ss or seconds)' : '') + '</label>' + howBtn(t.guide, 'How to') + '</div>' +
+    const id = 'tr-' + where + '-' + k; // one id per form: the quest, benchmark and sheet forms can be on screen together
+    return '<div class="field trial-test"><div class="tt-head"><label for="' + id + '">' + RK.STAT_INFO[k].code + ' · ' + t.test + (t.unit === 's' ? ' (m:ss or seconds)' : '') + '</label>' + howBtn(t.guide, 'How to') + '</div>' +
       '<p class="small">' + t.how + '</p>' + timerCtl(k) +
-      '<input class="input" id="tr-' + k + '" inputmode="' + (t.unit === 's' ? 'text' : 'numeric') + '" autocomplete="off" value="' + esc(v) + '" placeholder="' + (t.unit === 's' ? 'e.g. 1:25' : 'e.g. 20') + '"></div>';
+      '<input class="input" id="' + id + '" name="' + k + '" inputmode="' + (t.unit === 's' ? 'text' : 'numeric') + '" autocomplete="off" value="' + esc(v) + '" placeholder="' + (t.unit === 's' ? 'e.g. 1:25' : 'e.g. 20') + '"></div>';
   }).join('') +
-    '<details class="paste"><summary>Paste your results instead</summary><textarea class="input" id="tr-paste" placeholder="push-ups 18, plank 1:40, kicks 27, burpees 31"></textarea>' +
+    '<details class="paste"><summary>Paste your results instead</summary><textarea class="input" id="tr-' + where + '-paste" name="paste" aria-label="Paste your results" placeholder="push-ups 18, plank 1:40, kicks 27, burpees 31"></textarea>' +
     '<button class="btn line small-btn" type="button" data-act="tr-paste">Fill in the boxes</button></details>' +
     '<p class="small">Warm up first. Rest 3–5 minutes between tests. Leave a box empty to skip that test.</p>' +
     '<button class="btn block' + (where === 'sheet' ? '' : ' sys-btn') + '" type="submit">Save results</button></form>';
 }
 document.addEventListener('input', (ev) => {
-  const m = /^tr-(str|dur|spd|end)$/.exec((ev.target && ev.target.id) || '');
-  if (m) S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { [m[1]]: ev.target.value });
+  const t = ev.target;
+  if (t && RK.TEST_KEYS.includes(t.name) && t.closest && t.closest('.trial')) S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { [t.name]: t.value });
 });
 ACTIONS['tr-paste'] = (el) => {
-  const box = el.closest('form').querySelector('#tr-paste');
+  const box = el.closest('form').querySelector('[name="paste"]');
   const got = RK.parseTrialText(box ? box.value : '');
   const keys = RK.TEST_KEYS.filter((k) => got[k] != null);
   if (!keys.length) { toast('No results found. Try: push-ups 18, plank 1:40, kicks 27, burpees 31'); return; }
@@ -245,7 +254,7 @@ TICKS.push(() => {
   if (t.phase === 'run' && !T.up && el >= T.secs * 1000) {
     S.ui.tt = null; beep(880, 200, 3); keepAwake(false); scheduleRender();
     toast('Time! Enter your count.');
-    setTimeout(() => { const i = document.getElementById('tr-' + t.k); if (i) i.focus(); }, 50);
+    setTimeout(() => { const i = document.querySelector('.trial [name="' + t.k + '"]'); if (i) i.focus(); }, 50);
     return;
   }
   document.querySelectorAll('.tt-clock').forEach((c) => { c.textContent = ttText(t); });
@@ -255,7 +264,7 @@ FORMS.trial = (f) => {
   const ds = f.dataset || {}, where = ds.where, month = Number(ds.m) || null;
   const res = { date: today() };
   for (const k of RK.TEST_KEYS) {
-    const raw = f.querySelector('#tr-' + k).value, v = parseResult(raw);
+    const raw = f.querySelector('[name="' + k + '"]').value, v = parseResult(raw);
     if (raw.trim() && v == null) { toast('Check the ' + RK.TESTS[k].test.toLowerCase() + ' box: numbers only.'); return; }
     if (v != null) res[k] = v;
   }

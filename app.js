@@ -198,7 +198,7 @@ function openSheet(html) {
 function closeSheet() {
   const s = document.getElementById('sheet');
   s.hidden = true; s.innerHTML = '';
-  if (S.ui.st && !S.ui.st.done) keepAwake(false);
+  if (S.ui.st && !S.ui.st.done) { keepAwake(false); stretchKeep(); }
   S.ui.urge = null; S.ui.checkin = null; S.ui.st = null;
   if (S.ui.pendingRender) { S.ui.pendingRender = false; render(); }
 }

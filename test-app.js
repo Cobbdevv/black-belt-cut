@@ -52,15 +52,16 @@ assert.match(view(), /Sync is off/); assert.match(view(), /Awakening Trial/); ok
 // 2. Status tab: estimates are the starting ranks
 run(`S.ui.tab = 'status'; render();`);
 const sv = view(); clean(sv, 'status');
-assert.match(sv, /r-C">C-</); assert.match(sv, /r-D">D-</); assert.match(sv, /r-A">A</); assert.match(sv, /Ranks after 7 days/);
+assert.match(sv, /qs-row t-C"><span class="qs-name">Strength<\/span><span class="qs-rank">C-</); assert.match(sv, /qs-name">Endurance<\/span><span class="qs-rank">D-</);
+assert.match(sv, /qs-row t-A"><span class="qs-name">Potential<\/span><span class="qs-rank">A</); assert.match(sv, /Ranks after 7 days/);
 ok('status window shows the estimates, potential A, willpower measuring');
 
 // 3. Awakening Trial through the quest form
-run('FORMS.trial')(form({ '#tr-str': '15', '#tr-dur': '1:25', '#tr-spd': '31', '#tr-end': '' }, {}));
+run('FORMS.trial')(form({ '[name="str"]': '15', '[name="dur"]': '1:25', '[name="spd"]': '31', '[name="end"]': '' }, {}));
 assert.match(sheet(), /Measured below your estimate/); assert.match(sheet(), /Confirmed/); assert.doesNotMatch(sheet(), /END/);
 assert.strictEqual(run('S.data.ranks.tests[0].dur'), 85);
 assert.strictEqual(run('currentQuest().cleared'), false);
-run('FORMS.trial')(form({ '#tr-str': '', '#tr-dur': '', '#tr-spd': '', '#tr-end': '25' }, {}));
+run('FORMS.trial')(form({ '[name="str"]': '', '[name="dur"]': '', '[name="spd"]': '', '[name="end"]': '25' }, {}));
 assert.strictEqual(run('currentQuest().cleared'), true);
 assert.strictEqual(run(`S.data.sessions.filter((s) => s.kind === 'quest').length`), 1);
 ok('trial results set ranks; finishing all four clears the trial and counts as a session');
@@ -151,7 +152,7 @@ ok('rank trial: pasted results fill the boxes and the stopwatch fills the plank 
 // 11. End of month: benchmark card, then the "how far you've come" report
 run(`S.data.profile.startDate = BB.addDays(BB.weekStart(today()), -21); S.ui.tab = 'status'; render();`);
 assert.match(view(), /Month 1 benchmark/); assert.match(view(), /data-where="bench"/);
-run('FORMS.trial')(form({ '#tr-str': '22', '#tr-dur': '1:44', '#tr-spd': '33', '#tr-end': '28' }, {}, { where: 'bench', m: '1' }));
+run('FORMS.trial')(form({ '[name="str"]': '22', '[name="dur"]': '1:44', '[name="spd"]': '33', '[name="end"]': '28' }, {}, { where: 'bench', m: '1' }));
 assert.strictEqual(run('S.data.ranks.bench[1].done'), true);
 assert.match(sheet(), /How far you&#39;ve come|How far you've come/); assert.match(sheet(), /since the Awakening/); clean(sheet(), 'report');
 assert.doesNotMatch(view(), /Month 1 benchmark/); assert.match(view(), /Month 1 report/);
@@ -203,5 +204,36 @@ const slog = run('LOGBOOK.text(S.data, { today: today(), days: 7 })');
 assert.ok(slog.includes('## Stretching') && slog.includes('Stretched on 1 of'), 'stretching in the log');
 run(`S.ui.tab = 'train'; render();`); assert.match(view(), /Stretch again/);
 ok('stretching: guided routine with side switches, honest minutes, closing stops it, and it lands in the log');
+
+// 15. Closing the stretch routine after a minute or more keeps the time; under a minute it logs nothing
+run(`closeSheet(); S.data.stretch = {};`);
+run(`ACTIONS['stretch-start']()`);
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 45-second holds done
+run('closeSheet()');
+assert.strictEqual(run('S.data.stretch[today()]'), 2); // 90 s rounds to 2 minutes
+ok('closing the stretch routine early keeps the minutes already done');
+
+// 16. Questism-style status window: tier colour class, rank letter and a 7-segment bar
+run(`S.ui.tab = 'status'; render();`);
+const sw = view(); clean(sw, 'status window');
+assert.match(sw, /class="qs-row t-[FEDCBAS]"/); assert.match(sw, /qs-overall t-/);
+const firstBar = sw.match(/<span class="qs-bar"[^>]*>(.*?)<\/span>/)[1];
+assert.strictEqual((firstBar.match(/<i /g) || []).length, 7, 'seven segments');
+const strRow = sw.match(/<div class="qs-row (t-\w+)"><span class="qs-name">Strength<\/span><span class="qs-rank">([^<]+)<\/span><span class="qs-bar"[^>]*>(.*?)<\/span>/);
+const strIdx = run(`RK.rankIdx('${strRow[2]}')`), filled = (strRow[3].match(/--fill:(?:100|50)%/g) || []).length;
+assert.strictEqual(filled, Math.floor(strIdx / 3) + 1, 'segments filled up to the tier');
+assert.strictEqual(strRow[1], 't-' + strRow[2][0]);
+ok('status rows: tier colour, rank letter and a bar with one segment per tier');
+
+// 17. Reminders: Google Calendar links for training days and a daily stretch
+run(`S.ui.tab = 'guide'; S.data.profile.trainDays = [0, 2, 4]; render();`);
+const gv = view();
+assert.match(gv, /Reminders/); assert.match(gv, /calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+assert.match(gv, /BYDAY%3DMO%2CWE%2CFR/); assert.match(gv, /RRULE%3AFREQ%3DDAILY/);
+run('FORMS.reminders')(form({ '#rm-train': '07:30', '#rm-stretch': '22:15' }, {}));
+assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.data.profile.reminders)')), { train: '07:30', stretch: '22:15' });
+assert.match(view(), /T073000/); assert.match(view(), /Techniques/);
+ok('reminders: saved times flow into repeating calendar links; the guide library lists the techniques');
 
 console.log('all app tests passed');

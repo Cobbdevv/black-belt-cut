@@ -34,7 +34,8 @@
   const POT_BASE = 16; // A: 18 years old, 2.5 years of martial arts, and a lot of room above your current numbers.
 
   // 20 techniques, easiest first. Each one mastered is one rank step: 0 = F-, 20 = S+.
-  const TECH_GUIDES = { 0: 'boxing', 1: 'jab', 2: 'cross', 3: 'hook', 4: 'uppercut', 5: 'front-kick', 6: 'roundhouse', 8: 'front-kick', 15: 'roundhouse' };
+  const TECH_GUIDES = ['boxing', 'jab', 'cross', 'hook', 'uppercut', 'front-kick', 'roundhouse', 'side-kick', 'teep', 'footwork', 'slip-roll', 'combo',
+    'switch-kick', 'axe-kick', 'back-kick', 'high-roundhouse', 'spin-hook', 'jump-front-kick', 'tornado', '540-kick'];
   const TECHNIQUES = [
     ['Stance and guard', '3 minutes of light shadowboxing with your hands at your chin the whole time.'],
     ['Jab', '20 jabs at full extension, snapping straight back to your chin.'],

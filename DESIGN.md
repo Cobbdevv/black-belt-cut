@@ -16,6 +16,9 @@ colors:
   # No six-token cap on this project: one user, one dark theme (kern, 2026-10-12).
   # Belt colours are the real, universal belt colours.
   # Red (--danger) is for cravings and errors only.
+  # Exception (his request, 2026-10-13, Questism-style): rank tiers carry colour, --t-F to --t-S
+  # (grey, silver, sand, green, cyan, orange, blood red with a strong glow), on rank letters, rank badges and the
+  # 7-segment status bars only. S is the one red that doesn't mean a craving or an error; he picked it to match the Red Gate.
   # manifest.webmanifest and the theme-color meta repeat --bg as a literal and must match it.
 
 typography:
@@ -50,7 +53,7 @@ motion:
 - **Signature element:** the belt. It sits at the top of every screen, fills toward the next one, and the promotion tie is the one orchestrated moment. Ranks and quests get the System window.
 - **Exercise figures:** stick pictograms from the rig in figure.js, on a --bg stage with a hairline floor. The near side is --ink and the far side --muted, unless that limb is the one working. Props are --muted line art; cue lines, arrows and labels are --muted and --ink-2 in the mono face. One figure per stage. They only move without reduced motion; otherwise they show the key positions as still frames.
 - **What we refuse:**
-  - New colours. New UI reuses the existing palette.
+  - New colours. New UI reuses the existing palette. (The rank tier colours are the one deliberate exception.)
   - Shame states: a missed day or a failed quest is never red. Red means a craving or an error.
   - Rounded panels and drop-shadow cards. Glow stays on the System window, the S rank and the running timers.
   - Emoji and colour icons. Icons are single-colour line SVGs in currentColor.

@@ -429,6 +429,18 @@ function stretchFinish() {
   openSheet(stretchSheet());
   render();
 }
+// Closing the routine early keeps the time already spent: a stray tap outside the sheet shouldn't throw away minutes of work.
+function stretchKeep() {
+  const st = S.ui.st;
+  if (!st || st.done) return;
+  const ms = stretchSpent(st);
+  if (ms < 60000) return;
+  const mins = Math.round(ms / 60000);
+  S.data.stretch = Object.assign({}, S.data.stretch, { [today()]: stretchMins(today()) + mins });
+  save('stretch');
+  toast('Logged ' + plural(mins, 'minute') + ' of stretching.');
+  scheduleRender();
+}
 ACTIONS['stretch-start'] = () => {
   audioOn(); keepAwake(true);
   S.ui.st = { i: 0 };
