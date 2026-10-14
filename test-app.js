@@ -112,8 +112,8 @@ assert.match(view(), /fg-stage fg-thumb/); assert.match(view(), /How to do it/);
 run(`ACTIONS.start({ dataset: { kind: 'full' } })`);
 assert.match(view(), /Start warm-up/); clean(view(), 'warm-up');
 run(`ACTIONS['warm-start']()`);
-assert.match(view(), /move 1 of 4/); assert.match(view(), /data-fg="arm-circles"/);
-for (let i = 0; i < 4; i++) run(`ACTIONS['warm-next']()`);
+assert.match(view(), /move 1 of 5/); assert.match(view(), /data-fg="jumping-jacks"/);
+for (let i = 0; i < 5; i++) run(`ACTIONS['warm-next']()`);
 assert.strictEqual(run('DRAFT.warmup'), true); assert.strictEqual(run('DRAFT.step'), 1);
 assert.match(view(), /Exercise 1 of 5/); assert.match(view(), /Start 3 sets/); assert.match(view(), /fg-frames/); clean(view(), 'intro');
 run(`ACTIONS['ex-go']({ dataset: { pat: 'squat' } })`);
@@ -122,6 +122,7 @@ for (const i of [0, 1, 2]) run(`ACTIONS.set({ dataset: { pat: 'squat', i: '${i}'
 assert.strictEqual(run('DRAFT.step'), 2); assert.match(view(), /Exercise 2 of 5/); assert.match(view(), /Push/);
 run(`ACTIONS.step({ dataset: { i: '6' } })`);
 assert.match(view(), /Start round/); assert.match(view(), /data-fg="(boxing|kicks)"/); clean(view(), 'rounds');
+assert.match(view(), /class="intro-text"><div class="rounds-box">[\s\S]*id="round-clock"/, 'the round timer sits beside the figure, not below the card');
 run('ACTIONS.finish()');
 assert.match(sheet(), /How hard was it/);
 run(`FORMS['session-note']`)(form({ '#sn-note': 'Left knee a bit sore on the lunges' }, { effort: 3 }));
@@ -183,28 +184,36 @@ assert.doesNotMatch(sheet(), /Promotion/);
 ok('a corrected starting weight replaces the guessed weigh-in and never fakes a belt promotion');
 
 // 14. Stretching: the guided routine switches sides on the timer, logs real minutes, and shows up in the log
-run(`closeSheet(); S.data.stretch = {}; S.data.sessions.forEach((s) => { if (s.endedAt) s.endedAt = Date.now() - 7200000; }); S.ui.tab = 'today'; render();`);
+run(`closeSheet(); S.data.stretch = {}; for (let k = 21; k < 31; k++) S.data.stretch[BB.addDays(today(), -k)] = 17; S.data.sessions.forEach((s) => { if (s.endedAt) s.endedAt = Date.now() - 7200000; }); S.ui.tab = 'today'; render();`);
 assert.match(view(), /Start stretching/); assert.match(view(), /0 of 7 days this week/);
 run(`ACTIONS['stretch-start']()`);
-assert.match(sheet(), /Warm-up · 1 of 4/); assert.match(sheet(), /Skip the warm-up/); clean(sheet(), 'stretch warm-up');
+assert.match(sheet(), /Warm-up · 1 of 5/); assert.match(sheet(), /Skip the warm-up/); clean(sheet(), 'stretch warm-up');
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-assert.match(sheet(), /Warm-up · 2 of 4/);
+assert.match(sheet(), /Warm-up · 2 of 5/);
 run(`ACTIONS['stretch-skip-warm']()`);
 assert.strictEqual(run('S.ui.st.spent'), 0); // warm-up time is not stretching time
-assert.match(sheet(), /Stretch · 1 of 13/); assert.match(sheet(), /Lying hamstring stretch · Left/); assert.match(sheet(), /data-fg="hamstring-stretch"/); clean(sheet(), 'stretch');
+assert.match(sheet(), /Stretch · 1 of 19/); assert.match(sheet(), /Lying hamstring stretch · Right/); assert.match(sheet(), /Ease into the stretch/); assert.match(sheet(), /about 5 out of 10/); assert.match(sheet(), /data-fg="hamstring-stretch"/); clean(sheet(), 'stretch');
+assert.match(sheet(), /class="fg-stage st-stage" data-fg=/, 'the stretch figure is marked so it keeps a minimum size');
+run('S.ui.st.end = Date.now() + 73000'); run('TICKS.forEach((f) => f())'); // 17 s into the 90 s contract-relax hold: the first press
+assert.strictEqual(run('S.ui.st.phase'), 'press');
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-assert.match(sheet(), /Lying hamstring stretch · Right/);
+assert.match(sheet(), /Lying hamstring stretch · Left/);
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+assert.match(sheet(), /Lying hamstring stretch · Right again/); assert.match(sheet(), /Extra set for your tighter leg/); // the right leg gets an extra half set
+assert.doesNotMatch(sheet(), /Ease into the stretch/); // and it is a plain hold
 run('closeSheet()');
-assert.strictEqual(run('S.ui.st'), null); assert.strictEqual(run('Object.keys(S.data.stretch).length'), 0); // closing mid-way stops without logging
+assert.strictEqual(run('S.ui.st'), null); assert.strictEqual(run('S.data.stretch[today()]'), 3); // closing mid-way stops, and keeps the 3+ minutes done
+run('S.data.stretch = {}');
 run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
-run('S.ui.st.end = Date.now() + 45000 - 120000'); // as if two minutes passed on the first stretch
-for (let i = 0; i < 13; i++) run(`ACTIONS['stretch-next']()`);
+assert.doesNotMatch(sheet(), /Ease into the stretch/); // before 10 stretch days, contract-relax steps are plain holds
+run('S.ui.st.end = Date.now() + 90000 - 60000'); // as if one minute passed on the first stretch
+for (let i = 0; i < 19; i++) run(`ACTIONS['stretch-next']()`);
 assert.match(sheet(), /Done/);
 assert.strictEqual(run('S.data.stretch[today()]'), 1); // only the time really spent counts, not the skipped stretches
 run('closeSheet()');
 assert.match(view(), /1 of 7 days this week/); assert.match(view(), /Stretch again/);
 run(`ACTIONS['stretch-log']()`);
-assert.strictEqual(run('S.data.stretch[today()]'), 1 + 9);
+assert.strictEqual(run('S.data.stretch[today()]'), 1 + 17);
 const slog = run('LOGBOOK.text(S.data, { today: today(), days: 7 })');
 assert.ok(slog.includes('## Stretching') && slog.includes('Stretched on 1 of'), 'stretching in the log');
 run(`S.ui.tab = 'train'; render();`); assert.match(view(), /Stretch again/);
@@ -214,10 +223,32 @@ ok('stretching: guided routine with side switches, honest minutes, closing stops
 run(`closeSheet(); S.data.stretch = {};`);
 run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 45-second holds done
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 90-second holds done
 run('closeSheet()');
-assert.strictEqual(run('S.data.stretch[today()]'), 2); // 90 s rounds to 2 minutes
+assert.strictEqual(run('S.data.stretch[today()]'), 3); // 180 s is 3 minutes
 ok('closing the stretch routine early keeps the minutes already done');
+
+// 15a. Flexibility check: saved on the profile, and it decides which leg gets the extra set
+run(`closeSheet(); S.ui.tab = 'today'; render();`);
+assert.match(view(), /Flexibility check due/); assert.match(view(), /right leg gets an extra set/);
+run(`ACTIONS['flex-check']()`);
+assert.match(sheet(), /Flexibility check/); clean(sheet(), 'flex check');
+const flexForm = (v) => form({ '#fx-fl': v[0], '#fx-fr': v[1], '#fx-sl': v[2], '#fx-sr': v[3] });
+run(`FORMS['flex-check']`)(flexForm(['120', 'x', '90', '80']));
+assert.strictEqual(run('(S.data.profile.flex || []).length'), 0); // a bad box saves nothing
+run(`FORMS['flex-check']`)(flexForm(['100', '120', '90', '85']));
+assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.data.profile.flex)')), [{ date: run('today()'), front: [100, 120], side: [90, 85] }]);
+assert.match(view(), /left leg tested tighter/);
+run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
+assert.match(sheet(), /Lying hamstring stretch · Left/); // the tighter leg goes first now
+run('closeSheet()');
+run(`FORMS['flex-check']`)(flexForm(['110', '112', '90', '89'])); // same day: replaces, and 1 cm apart is even
+assert.strictEqual(run('S.data.profile.flex.length'), 1); assert.match(view(), /Both legs tested even/);
+assert.match(view(), /next one in 28 days/);
+const flog = run('LOGBOOK.text(S.data, { today: today(), days: 7 })');
+assert.ok(flog.includes('Flexibility checks') && flog.includes('Legs are even'), 'flexibility checks in the log');
+run('S.data.profile.flex = []');
+ok('flexibility check: validated, kept on the profile, and it picks the leg that gets the extra set');
 
 // 15b. Warm-ups everywhere: short workouts start with one; stretching skips it right after training
 run(`closeSheet(); DRAFT = null; saveDraft(); ACTIONS.start({ dataset: { kind: 'short' } })`);
@@ -231,7 +262,7 @@ assert.match(sheet(), /Save and stretch now/);
 assert.ok(run('S.data.sessions[S.data.sessions.length - 1].endedAt') > 0);
 run(`ACTIONS['stretch-now']({ closest: () => (${form.toString()})({ '#sn-note': 'Quick one' }, { effort: 2 }) })`);
 assert.strictEqual(run('S.data.sessions[S.data.sessions.length - 1].note'), 'Quick one');
-assert.match(sheet(), /Stretch · 1 of 13/); assert.match(sheet(), /You just trained/); assert.doesNotMatch(sheet(), /Warm-up · /);
+assert.match(sheet(), /Stretch · 1 of 19/); assert.match(sheet(), /You just trained/); assert.doesNotMatch(sheet(), /Warm-up · /);
 run(`ACTIONS['stretch-end']()`);
 assert.match(sheet(), /Stopped/); assert.match(sheet(), /Less than 30 seconds of stretching/); // nothing logged, and the copy says why
 const oldShort = run(`LOGBOOK.text({ profile: S.data.profile, sessions: [{ date: today(), kind: 'short', warmup: false, rounds: 1, mins: 13, ex: {} }] }, { today: today(), days: 7 })`);

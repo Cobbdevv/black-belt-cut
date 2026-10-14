@@ -352,11 +352,18 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
 .fg .fg-guide { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2.5; }
 .fg .fg-arrow { stroke: var(--ink-2); stroke-width: 1.4; }
 .fg .fg-trail { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 2 2; }
-.fg .fg-text { fill: var(--ink-2); font-family: var(--mono); font-size: 4.4px; font-weight: 600; letter-spacing: .08em; }
+.fg .fg-text { fill: var(--ink-2); font-family: var(--mono); font-size: 4.4px; font-weight: 600; letter-spacing: .08em; paint-order: stroke; stroke: var(--bg); stroke-width: 1.6px; stroke-linejoin: round; }
 .fg .fg-x circle { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; }
 .fg .fg-x path { stroke: var(--ink); stroke-width: 1.3; }
 .fg-stage { position: relative; display: flex; flex-direction: column; aspect-ratio: 16 / 10; padding: 8px 8px 0; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
 .fg-stage > .fg { flex: 1; min-height: 0; }
+/* overflow:hidden lets a stage shrink to nothing inside a height-capped flex column like a sheet. Every sheet figure gets a
+   fixed share instead and the sheet scrolls; on a 150%-scaled laptop a sheet is only ~500 px tall. The stretch figure may
+   give up some height to keep its timer in view, down to a floor. Workout figures are capped to fit a short screen. */
+.sheet > .fg-stage { flex: none; max-height: 52vh; }
+.sheet > .fg-stage.st-stage { flex: 0 1 auto; min-height: min(200px, 40vh); }
+.intro-show > .fg-stage { max-height: 52vh; }
+.card.intro > .fg-stage { max-height: 40vh; }
 .fg-stage.fg-mini, .fg-stage.fg-thumb { aspect-ratio: 4 / 3; padding: 4px; }
 .fg-tempo { position: relative; flex: none; height: 24px; margin: 6px -8px 0; border-top: 1px solid var(--line); }
 .fg-tempo span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; border-left: 1px solid var(--line); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -386,6 +393,8 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
 .intro-plan b { font-size: 18px; }
 .work-head { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px; align-items: start; }
 .work-head > div { display: flex; flex-direction: column; gap: 4px; }
+.work-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rounds-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
 .work-thumb, .plan-thumb { display: block; width: 100%; padding: 0; border: 0; background: none; }
 .warm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .warm-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -423,6 +432,18 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
 /* ---------- Desktop ---------- */
 @media (min-width: 960px) {
   .intro-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; }
+  /* Big figures on a big screen: the moving figure sits beside the sets, and every thumbnail grows. */
+  .card.ex.work { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, 1fr); grid-template-rows: auto 1fr; column-gap: 28px; row-gap: 12px; align-items: start; }
+  .card.ex.work > .work-head { display: contents; }
+  .card.ex.work .work-thumb { grid-column: 1; grid-row: 1 / span 2; }
+  .card.ex.work .work-title { grid-column: 2; grid-row: 1; }
+  .card.ex.work > .work-body { grid-column: 2; grid-row: 2; }
+  .card.plan-ex { grid-template-columns: minmax(84px, 200px) minmax(150px, 1fr); }
+  .stepbar { flex-wrap: wrap; }
+  .fg-frames { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .lib { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .warm-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sheet:has(.fg-stage) { max-width: 760px; }
   .ex-title { font-size: 44px; }
   .view > .card.guide-lib { column-span: all; }
   body { background-size: 44px 44px; }
@@ -442,7 +463,7 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
   .tab.on { background: var(--surface-2); border-left-color: var(--ink); }
   .tab.on::before { display: none; }
   .main { max-width: 1240px; margin: 0; padding: 36px 44px 72px; }
-  .view { display: block; columns: 2; column-gap: 20px; padding-top: 0; }
+  .view { display: block; columns: 1; column-gap: 20px; padding-top: 0; }
   .view > * { margin: 0 0 20px; column-span: all; }
   .view > .card, .view > .sys, .view > .crave, .view > form.card { column-span: none; break-inside: avoid; }
   .view > .card:has(.chart) { column-span: all; }
@@ -453,6 +474,18 @@ th { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight
   .scrim { align-items: center; }
   .sheet { max-width: 560px; max-height: 86vh; border: 1px solid var(--line-2); border-top-color: var(--ink); }
   .restbar { left: var(--side); bottom: 24px; }
+}
+/* Stretch timer sheet on a wide or short screen (a desktop, a half-width window, a phone on its side): figure on the left,
+   timer and controls on the right, so both stay in view without squeezing the figure. */
+@media (min-width: 960px), (min-width: 600px) and (orientation: landscape) {
+  .sheet:has(#st-clock) { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr); column-gap: 22px; row-gap: 12px; align-content: start; }
+  .sheet:has(#st-clock) > * { grid-column: 1 / -1; }
+  .sheet:has(#st-clock) > .fg-stage { grid-column: 1; grid-row: 3 / span 4; align-self: start; max-height: 60vh; }
+  .sheet:has(#st-clock) > #st-clock, .sheet:has(#st-clock) > p, .sheet:has(#st-clock) > .row, .sheet:has(#st-clock) > .linkish { grid-column: 2; }
+}
+/* Two columns once each one is wide enough (about 380 px) for a figure beside its text. */
+@media (min-width: 1150px) {
+  .view { columns: 2; }
 }
 @media (min-width: 1500px) {
   .main { padding-inline: 64px; }

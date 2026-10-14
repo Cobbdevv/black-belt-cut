@@ -73,7 +73,7 @@
   ];
   const SQ_CUES = [
     { from: 0.05, to: 1.2, arrow: [-9, -12], at: 'hip', off: [-8, 4], text: 'HIPS BACK', lx: [-30, -6] },
-    { from: 1.25, to: 2.2, text: 'THIGHS LEVEL', at: 'knN', off: [-8, 10], anchor: 'middle' },
+    { from: 1.25, to: 2.2, text: 'THIGHS LEVEL', at: 'knN', off: [14, 12], anchor: 'middle' },
   ];
   add('squat', {
     name: 'Bodyweight squat', view: [-48, -8, 58, 106], dur: 2.6, props: [FLOOR],
@@ -85,7 +85,7 @@
     name: 'Pause squat', view: [-48, -8, 58, 106], dur: 5.6, props: [FLOOR],
     keys: [{ t: 0, p: sqTop, f: 'Stand tall' }, { t: 1.2, p: sqBottom, f: 'Hold 3 seconds' }, { t: 4.2, p: sqBottom }, { t: 5.2, p: sqTop }],
     tempo: [[0, 1.2, 'Down'], [1.2, 4.2, 'Hold 3 s'], [4.2, 5.2, 'Up']],
-    cues: [SQ_CUES[0], { from: 1.25, to: 4.2, text: 'HOLD · 3 S', at: 'knN', off: [-8, 10], anchor: 'middle' }],
+    cues: [SQ_CUES[0], { from: 1.25, to: 4.2, text: 'HOLD · 3 S', at: 'knN', off: [8, 6], anchor: 'middle' }],
     steps: [SQ_STEPS[0], SQ_STEPS[1], 'Sink until your thighs are level, then hold the bottom for 3 full seconds.', 'Stay tight, then drive up to stand tall.'],
     avoid: 'Bouncing out of the bottom, or relaxing while you hold.',
   });
@@ -118,7 +118,7 @@
     view: [-80, -8, 40, 106], dur: 3, props: [FLOOR, couchBehind(-30)],
     keys: [{ t: 0, p: ssTop, f: 'Back foot on the couch' }, { t: 1.2, p: ssBottom, f: 'Drop straight down' }, { t: 2.4, p: ssTop }],
     tempo: [[0, 1.2, 'Down'], [1.2, 2.4, 'Up']],
-    cues: [{ from: 0.1, to: 1.2, arrow: [0, -12], at: 'hip', off: [9, 6], text: 'STRAIGHT DOWN', lx: [3, -4] }],
+    cues: [{ from: 0.1, to: 1.2, arrow: [0, -12], at: 'hip', off: [9, 6], text: 'STRAIGHT DOWN', lx: [3, 20] }],
     avoid: 'Front foot too close to the couch, so your heel lifts.',
   };
   add('split-squat', Object.assign({ name: 'Bulgarian split squat',
@@ -230,7 +230,7 @@
   const ROW = rowSet([27, B.ankle], ARM - 0.6, 19.5, two([GRIP[0], GRIP[1]]));
   const rowCues = [
     { always: true, line: ['anN', 'neck'], text: 'STRAIGHT BODY', ext: 5, side: [-1, 0] },
-    { from: 0.1, to: 1.0, arrow: [12, 3], at: 'chest', off: [-14, 0], text: 'PULL', lx: [-16, 6] },
+    { from: 0.1, to: 1.0, arrow: [12, 3], at: 'chest', off: [-14, 0], text: 'PULL', lx: [-26, 2] },
   ];
   add('door-row', {
     name: 'Doorframe row', view: [-44, -8, 58, 106], dur: 2.6, props: ROW_PROPS,
@@ -337,7 +337,7 @@
     return p;
   };
   add('dead-bug', {
-    name: 'Dead bug', view: [-56, -8, 66, 56], dur: 5.6, props: [FLOOR],
+    name: 'Dead bug', view: [-62, -8, 76, 60], dur: 5.6, props: [FLOOR],
     keys: [{ t: 0, p: dbIn, f: 'Arms up, knees up' }, { t: 1.2, p: dbOut(0), f: 'Opposite arm and leg out' }, { t: 1.7, p: dbOut(0) }, { t: 2.8, p: dbIn }, { t: 4.0, p: dbOut(1), f: 'Switch sides' }, { t: 4.5, p: dbOut(1) }],
     tempo: [[0, 1.2, 'Reach'], [1.7, 2.8, 'Back'], [2.8, 4.0, 'Reach'], [4.5, 5.6, 'Back']],
     cues: [{ always: true, text: 'LOWER BACK STAYS DOWN', at: [12, 51], anchor: 'middle' }],
@@ -398,10 +398,10 @@
   const hoSh = at(HO_P, 163, B.torso);
   const hoUp = set(hoFlat, { torso: 163, head: -8, hands: two(at(hoSh, 168, ARM - 0.6)), feet: two(at(HO_P, 14, LEG - 0.5)), toes: two(14) });
   add('hollow-hold', {
-    name: 'Hollow hold', view: [-58, -8, 66, 50], dur: 5.6, props: [FLOOR],
+    name: 'Hollow hold', view: [-64, -8, 78, 56], dur: 5.6, props: [FLOOR],
     keys: [{ t: 0, p: hoFlat, f: 'Arms overhead' }, { t: 1.0, p: hoUp, f: 'Lift into a banana' }, { t: 4.4, p: hoUp }, { t: 5.2, p: hoFlat }],
     tempo: [[0, 1, 'Lift'], [1, 4.4, 'Hold'], [4.4, 5.2, 'Lower']],
-    cues: [{ from: 1.1, to: 4.4, arrow: [0, -6], at: 'hip', off: [-4, 14], text: 'BACK PRESSED DOWN', lx: [-18, 4] }],
+    cues: [{ from: 1.1, to: 4.4, arrow: [0, -6], at: 'hip', off: [-4, 14], text: 'BACK PRESSED DOWN', lx: [-18, 8] }],
     steps: ['Lie on your back with your arms overhead.', 'Press your lower back into the floor.', 'Lift your shoulders and straight legs a few centimetres.', 'Hold the banana shape. Bend your knees to make it easier.'],
     avoid: 'Your lower back arching off the floor.',
   });
@@ -413,7 +413,7 @@
     name: 'Wall sit', view: [-30, -8, 46, 92], dur: 6.4, props: [FLOOR, { wall: -11.5 }],
     keys: [{ t: 0, p: wsHigh, f: 'Back on the wall' }, { t: 1.2, p: wsLow, f: 'Knees at 90°' }, { t: 5.2, p: wsLow }, { t: 6.0, p: wsHigh }],
     tempo: [[0, 1.2, 'Slide down'], [1.2, 5.2, 'Hold'], [5.2, 6, 'Up']],
-    cues: [{ from: 1.3, to: 5.2, text: '90°', at: 'knN', off: [-7, -9] }],
+    cues: [{ from: 1.3, to: 5.2, text: '90°', at: 'knN', off: [-15, -11] }],
     steps: ['Back flat against a wall, feet about two steps out.', 'Slide down until your knees are at 90°.', 'Knees over your ankles, hands off your legs.', 'Hold. Breathe through it.'],
     avoid: 'Hands pushing on your thighs, or knees drifting past your toes.',
   });
@@ -493,7 +493,7 @@
   add('roundhouse', {
     name: 'Roundhouse kick', view: KICK_VIEW, dur: 1.9, props: [FLOOR],
     keys: [{ t: 0, p: guard, f: 'Stance' }, { t: 0.35, p: chamberRH, hi: ['lN'], f: 'Knee up, pivot' }, { t: 0.62, p: roundhouse, hi: ['lN'], f: 'Hip over, shin through' }, { t: 0.78, p: roundhouse, hi: ['lN'] }, { t: 1.05, p: chamberRH, hi: ['lN'] }, { t: 1.4, p: guard }],
-    cues: [{ from: 0.3, to: 0.95, trail: ['toeN', 0.18, 0.62] }, { from: 0.45, to: 0.95, text: 'PIVOT', at: 'toeF', off: [-2, 8], anchor: 'end' }],
+    cues: [{ from: 0.3, to: 0.95, trail: ['toeN', 0.18, 0.62] }, { from: 0.45, to: 0.95, text: 'PIVOT', at: 'toeF', off: [-14, 4], anchor: 'end' }],
     steps: ['Fighting stance, hands up.', 'Lift your rear knee and pivot on your standing foot.', 'Turn your hip over and snap your shin through at waist height or higher.', 'Pull it back and land in stance. For the speed test, alternate legs.'],
     avoid: 'Kicking without pivoting, or dropping your hands.',
   });
@@ -537,7 +537,7 @@
   add('teep', {
     name: 'Push kick (teep)', view: KICK_VIEW, dur: 1.8, props: [FLOOR],
     keys: [{ t: 0, p: guard, f: 'Stance' }, { t: 0.3, p: chamberTP, hi: ['lN'], f: 'Knee up' }, { t: 0.55, p: teep, hi: ['lN'], f: 'Hips through, ball of the foot' }, { t: 0.75, p: teep, hi: ['lN'] }, { t: 1.0, p: chamberTP, hi: ['lN'] }, { t: 1.3, p: guard }],
-    cues: [{ from: 0.45, to: 0.9, arrow: [12, 0], at: 'hip', off: [-4, 8], text: 'HIPS FORWARD', lx: [-30, 7] }],
+    cues: [{ from: 0.45, to: 0.9, arrow: [12, 0], at: 'hip', off: [-4, 8], text: 'HIPS FORWARD', lx: [-54, 3] }],
     steps: ['Fighting stance, hands up.', 'Lift the knee straight up in front of you.', 'Push your hips forward and drive the ball of the foot into the target, like shoving a door open.', 'Pull it back to the knee, then land in stance.'],
     avoid: 'Leaning so far back that you lose your balance.',
   });
@@ -713,6 +713,8 @@
   add('leg-swings', {
     name: 'Leg swings', view: [-46, -8, 60, 106], dur: 1.3, props: [FLOOR],
     keys: [{ t: 0, p: lsSwing(-32), f: 'Swing back' }, { t: 0.65, p: lsSwing(62), f: 'Swing forward' }],
+    // The foot travels on an arc, so the leg stays straight through the whole swing.
+    mod: (p, t) => { const d = 15 - 47 * Math.cos((t / 1.3) * Math.PI * 2); p.feet = [raise(d), p.feet[1]]; p.toes = [d - 15, FLAT]; },
     steps: ['Hold a wall or chair for balance.', 'Swing one straight leg forward and back.', 'Let it get a little higher each time, no forcing.', '10 swings, then switch legs.'],
   });
 
@@ -739,7 +741,7 @@
     name: 'Kneeling hip flexor stretch', view: [-58, -8, 40, 92], dur: 6.2, props: [FLOOR],
     keys: [{ t: 0, p: hfPose([-4, 27], 90), f: 'One knee down, tall' }, { t: 1.4, p: hfPose([3, 25.5], 93), f: 'Hips forward, squeeze' }, { t: 4.8, p: hfPose([3, 25.5], 93) }, { t: 5.8, p: hfPose([-4, 27], 90) }],
     tempo: [[0, 1.4, 'Shift forward'], [1.4, 4.8, 'Hold'], [4.8, 5.8, 'Back']],
-    cues: [{ from: 0.1, to: 1.4, arrow: [8, 0], at: 'hip', off: [-14, 2], text: 'HIPS FORWARD', lx: [-30, 5] }, { from: 1.5, to: 4.8, text: 'SQUEEZE THE BACK GLUTE', at: [-10, 84], anchor: 'middle' }],
+    cues: [{ from: 0.1, to: 1.4, arrow: [8, 0], at: 'hip', off: [-14, 2], text: 'HIPS FORWARD', lx: [-38, 5] }, { from: 1.5, to: 4.8, text: 'SQUEEZE THE BACK GLUTE', at: [-10, 84], anchor: 'middle' }],
     steps: ['Kneel on one knee with a folded towel under it, the other foot flat in front.', 'Tuck your hips under and squeeze the glute of the back leg.', 'Shift your hips forward until you feel it at the front of the back hip.', 'Stay tall and breathe. Switch sides when the timer says.'],
     avoid: 'Arching your lower back to fake the stretch.',
   });
@@ -753,7 +755,7 @@
     name: 'Lying glute stretch', view: [-30, -8, 70, 62], dur: 6.4, props: [FLOOR],
     keys: [{ t: 0, p: gsPose([25, 21, 4]), f: 'Hug one knee' }, { t: 1.4, p: gsPose([20, 27, -3]), f: 'Pull to the opposite shoulder' }, { t: 5, p: gsPose([20, 27, -3]) }, { t: 6, p: gsPose([25, 21, 4]) }],
     tempo: [[0, 1.4, 'Pull in'], [1.4, 5, 'Hold'], [5, 6, 'Ease off']],
-    cues: [{ from: 1.5, to: 5, text: 'KNEE TOWARD THE OPPOSITE SHOULDER', at: [20, 56], anchor: 'middle' }],
+    cues: [{ from: 1.5, to: 5, text: 'KNEE TO OPPOSITE SHOULDER', at: [20, 56], anchor: 'middle' }],
     steps: ['Lie on your back with both legs long.', 'Hug one knee and pull it toward the opposite shoulder.', 'Hold where you feel it in the side of your hip and glute. Breathe slowly.', 'Switch sides when the timer says.'],
     avoid: 'Lifting your head and shoulders off the floor.',
   });
@@ -772,9 +774,21 @@
     name: 'Butterfly stretch', view: [-46, -8, 46, 62], dur: 6.4, props: [FLOOR],
     keys: [{ t: 0, p: bfPose(0.9), f: 'Soles together' }, { t: 1.4, p: bfPose(-0.35), f: 'Knees sink toward the floor' }, { t: 5, p: bfPose(-0.35) }, { t: 6, p: bfPose(0.9) }],
     tempo: [[0, 1.4, 'Let go'], [1.4, 5, 'Hold'], [5, 6, 'Ease off']],
-    cues: [{ from: 1.5, to: 5, text: 'PRESS KNEES UP 5 S, THEN RELAX DEEPER', at: [0, 55], anchor: 'middle' }],
+    cues: [{ from: 1.5, to: 3.2, text: 'PRESS KNEES UP · 5 S', at: [0, 55], anchor: 'middle' }, { from: 3.3, to: 5, text: 'RELAX · DEEPER', at: [0, 55], anchor: 'middle' }],
     steps: ['Sit with the soles of your feet together, heels toward you.', 'Hold your feet and let your knees fall out to the sides.', 'Halfway through, press your knees up against your elbows for 5 seconds, relax, then let them sink lower.', 'Sit tall. Lean forward from the hips to go deeper.'],
     avoid: 'Forcing your knees down with your hands.',
+  });
+  // Wide straddle seen from the front: straight legs out to the sides, chest folding forward from the hips.
+  // Upright: hands rest on the thighs. Folded: hands walk out to the floor in front.
+  const stPose = (lean) => { const f = lean / 42; return { front: true, hip: [0, 9], torso: 90, pitch: lean, feet: [[-44, 3.6, 25], [44, 3.6, 25]], toes: two(80),
+    hands: [[-(12.8 - 1.8 * f), 8 - 5 * f, 5 + 25 * f], [12.8 - 1.8 * f, 8 - 5 * f, 5 + 25 * f]] }; };
+  add('straddle-stretch', {
+    name: 'Seated straddle stretch', view: [-52, -8, 52, 62], dur: 6.4, props: [FLOOR],
+    keys: [{ t: 0, p: stPose(0), f: 'Legs wide, sit tall' }, { t: 1.4, p: stPose(42), f: 'Fold forward from the hips' }, { t: 5, p: stPose(42) }, { t: 6, p: stPose(0) }],
+    tempo: [[0, 1.4, 'Fold'], [1.4, 5, 'Hold'], [5, 6, 'Sit up']],
+    cues: [{ from: 1.5, to: 5, text: 'CHEST FORWARD, BACK LONG', at: [0, 55], anchor: 'middle' }],
+    steps: ['Sit with your legs straight and as wide as is comfortable, toes pointing up.', 'Sit tall, hands on the floor in front of you.', 'Walk your hands forward and fold from the hips, chest toward the floor, back long.', 'Hold where you feel the inside and back of both thighs. Sit on a cushion if your back rounds.'],
+    avoid: 'Rounding your back to reach further, or letting your knees roll in.',
   });
   const raise = (deg) => ({ w: [Math.sin(deg * DEG) * (LEG - 0.6), -Math.cos(deg * DEG) * (LEG - 0.6), 0] });
   const flPose = (deg) => ({ hip: [0, STAND], torso: 90 + deg / 18, feet: [raise(deg), [2, B.ankle]], toes: [FLAT + deg, FLAT], hands: [{ w: [3, -25] }, { w: [26, -6] }] });
@@ -795,6 +809,13 @@
     cues: [{ from: 1.7, to: 3.6, text: 'TOES FORWARD', at: [0, 100], anchor: 'middle' }],
     steps: ['Stand tall with one hand on a wall or chair.', 'Raise one straight leg out to the side, toes pointing forward.', 'Hold 2 seconds at the top, then lower slowly.', 'Small and controlled beats high and sloppy. About 5 slow reps per side.'],
     avoid: 'Tipping your whole body sideways to cheat the height.',
+  });
+  add('side-leg-swings', {
+    name: 'Side leg swings', view: [-56, -8, 50, 106], dur: 1.4, props: [FLOOR],
+    keys: [{ t: 0, p: srPose(-16), f: 'Swing across your body' }, { t: 0.7, p: srPose(58), hi: ['lN'], f: 'Swing out and up' }],
+    mod: (p, t) => { const s = srPose(21 - 37 * Math.cos((t / 1.4) * Math.PI * 2)); p.feet = s.feet; p.torso = s.torso; },
+    steps: ['Stand tall and hold a wall or chair for balance.', 'Swing one straight leg across in front of you, then out to the side and up.', 'Let it go a little higher each swing, relaxed, no forcing.', '10–15 swings, then switch legs.'],
+    avoid: 'Twisting your hips open to fake the height. Toes stay pointing forward.',
   });
 
   const MOVES = {

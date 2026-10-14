@@ -43,7 +43,8 @@
   function frame(p) {
     const a = (p.torso == null ? 90 : p.torso) * RAD;
     let fwd, u, n;
-    if (p.front) { fwd = [0, 0, 1]; u = [Math.cos(a), Math.sin(a), 0]; n = [0, 0, 1]; }
+    // Front mode can also pitch the torso toward the viewer (a forward fold seen from the front).
+    if (p.front) { const pt = (p.pitch || 0) * RAD; fwd = [0, 0, 1]; u = [Math.cos(a), Math.sin(a) * Math.cos(pt), Math.sin(a) * Math.sin(pt)]; n = [0, -Math.sin(pt), Math.cos(pt)]; }
     else { fwd = [1, 0, 0]; u = [Math.cos(a), Math.sin(a), 0]; n = [Math.sin(a), -Math.cos(a), 0]; }
     if (p.yaw) { fwd = rotY(fwd, p.yaw); u = rotY(u, p.yaw); n = rotY(n, p.yaw); }
     return { fwd, u, n, r: cross(n, u), side: cross(fwd, UP) };
@@ -101,7 +102,7 @@
 
   // ---------- Timeline ----------
   const ease = (s) => (1 - Math.cos(Math.PI * s)) / 2;
-  const NUM = ['torso', 'yaw', 'twist', 'head'];
+  const NUM = ['torso', 'yaw', 'twist', 'head', 'pitch'];
   const PAIRS = ['hands', 'feet'];
   const ANGLES = ['toes', 'palms'];
   const POLES = ['elbows', 'knees'];
@@ -209,13 +210,36 @@
     return '<path class="fg-pack" d="' + pathOf(pts) + 'Z"/>';
   }
 
-  function arrowMarkup(a, b, label, lx) {
+  function arrowMarkup(a, b) {
     const d = sub(b, a), L = len(d) || 1, ux = d[0] / L, uy = d[1] / L;
     const h1 = [b[0] - ux * 4.5 - uy * 3, b[1] - uy * 4.5 + ux * 3, 0], h2 = [b[0] - ux * 4.5 + uy * 3, b[1] - uy * 4.5 - ux * 3, 0];
-    return '<path class="fg-arrow" d="' + pathOf([a, b]) + 'M' + P2(h1) + 'L' + P2(b) + 'L' + P2(h2) + '"/>' + (label ? textMarkup(add(b, lx || [0, 0, 0]), label) : '');
+    return '<path class="fg-arrow" d="' + pathOf([a, b]) + 'M' + P2(h1) + 'L' + P2(b) + 'L' + P2(h2) + '"/>';
   }
   function textMarkup(at, text, anchor) {
     return '<text class="fg-text" x="' + r1(at[0]) + '" y="' + r1(-at[1]) + '"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + '>' + text + '</text>';
+  }
+  // A stage fills its width and clips at the viewBox, so cue labels and guide lines are kept inside it. Labels are 4.4-unit
+  // monospace with .08em tracking: about 3 units a letter.
+  const LETTER = 2.99, CAP = 3.2, EDGE = 2;
+  const clampTo = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
+  function fitText(view, at, text, anchor) {
+    const w = text.length * LETTER, before = anchor === 'middle' ? w / 2 : anchor === 'end' ? w : 0;
+    return [clampTo(at[0], view[0] + EDGE + before, view[2] - EDGE - w + before), clampTo(at[1], view[1] + EDGE, view[3] - EDGE - CAP)];
+  }
+  function fitTurned(view, at, text, ang) {
+    const w = text.length * LETTER, c = Math.abs(Math.cos(ang * RAD)), s = Math.abs(Math.sin(ang * RAD));
+    const hx = (c * w) / 2 + s * 2.2, hy = (s * w) / 2 + c * 2.2;
+    return [clampTo(at[0], view[0] + EDGE + hx, view[2] - EDGE - hx), clampTo(at[1], view[1] + EDGE + hy, view[3] - EDGE - hy)];
+  }
+  function clipSeg(view, p, q) {
+    const dx = q[0] - p[0], dy = q[1] - p[1], lim = [[-dx, p[0] - view[0] - 1], [dx, view[2] - 1 - p[0]], [-dy, p[1] - view[1] - 1], [dy, view[3] - 1 - p[1]]];
+    let t0 = 0, t1 = 1;
+    for (let i = 0; i < 4; i++) {
+      const a = lim[i][0], b = lim[i][1];
+      if (a === 0) { if (b < 0) return null; continue; }
+      if (a < 0) t0 = Math.max(t0, b / a); else t1 = Math.min(t1, b / a);
+    }
+    return t0 < t1 ? [[p[0] + t0 * dx, p[1] + t0 * dy, 0], [p[0] + t1 * dx, p[1] + t1 * dy, 0]] : null;
   }
   function cueWeight(c, t, dur) {
     const tt = ((t % dur) + dur) % dur;
@@ -223,14 +247,19 @@
     const edge = 0.18;
     return Math.max(0, Math.min(1, (tt - c.from) / edge, (c.to - tt) / edge));
   }
+  // Arrows, guide lines and trails go under the figure. Their labels go on top with a dark outline (CSS), so a limb moving
+  // past a label never hides it.
   function cuesMarkup(move, J, t, p) {
-    return (move.cues || []).map((c) => {
+    const v = move.view;
+    let under = '', over = '';
+    (move.cues || []).forEach((c) => {
       const w = c.always ? 1 : cueWeight(c, t, move.dur);
-      if (!w) return '';
-      let body = '';
+      if (!w) return;
+      let lo = '', hi = '';
       if (c.arrow) {
-        const base = add(joint(J, c.at), [c.off ? c.off[0] : 0, c.off ? c.off[1] : 0, 0]);
-        body = arrowMarkup(base, add(base, [c.arrow[0], c.arrow[1], 0]), c.text, c.lx ? [c.lx[0], c.lx[1], 0] : null);
+        const base = add(joint(J, c.at), [c.off ? c.off[0] : 0, c.off ? c.off[1] : 0, 0]), tip = add(base, [c.arrow[0], c.arrow[1], 0]);
+        lo = arrowMarkup(base, tip);
+        if (c.text) hi = textMarkup(fitText(v, add(tip, c.lx ? [c.lx[0], c.lx[1], 0] : [0, 0, 0]), c.text), c.text);
       } else if (c.line) {
         const a = joint(J, c.line[0]), b = joint(J, c.line[1]);
         const d = unit(sub(b, a)), ext = c.ext || 6;
@@ -241,22 +270,28 @@
         const mid = add(mul(add(a, b), 0.5), shift), lift = c.lift || 4.5;
         let ang = Math.atan2(-d[1], d[0]) / RAD;
         if (ang > 90) ang -= 180; else if (ang < -90) ang += 180;
-        const tx = r1(mid[0] + nx * lift), ty = r1(-(mid[1] + ny * lift));
-        body = '<path class="fg-guide" d="' + pathOf([add(sub(a, mul(d, ext)), shift), add(add(b, mul(d, ext)), shift)]) + '"/>' +
-          (c.text ? '<text class="fg-text" text-anchor="middle" dominant-baseline="middle" x="' + tx + '" y="' + ty + '" transform="rotate(' + r1(ang) + ' ' + tx + ' ' + ty + ')">' + c.text + '</text>' : '');
+        const seg = clipSeg(v, add(sub(a, mul(d, ext)), shift), add(add(b, mul(d, ext)), shift));
+        if (seg) lo = '<path class="fg-guide" d="' + pathOf(seg) + '"/>';
+        if (c.text) {
+          const q = fitTurned(v, [mid[0] + nx * lift, mid[1] + ny * lift], c.text, ang), tx = r1(q[0]), ty = r1(-q[1]);
+          hi = '<text class="fg-text" text-anchor="middle" dominant-baseline="middle" x="' + tx + '" y="' + ty + '" transform="rotate(' + r1(ang) + ' ' + tx + ' ' + ty + ')">' + c.text + '</text>';
+        }
       } else if (c.trail) {
         const pts = [];
         for (let k = 0; k <= 16; k++) {
           const tt = c.trail[1] + (c.trail[2] - c.trail[1]) * (k / 16);
           pts.push(joint(solve(poseAt(move, tt)), c.trail[0]));
         }
-        body = '<path class="fg-trail" d="' + pathOf(pts) + '"/>';
+        lo = '<path class="fg-trail" d="' + pathOf(pts) + '"/>';
       } else if (c.text) {
         const at = Array.isArray(c.at) ? [c.at[0], c.at[1], 0] : add(joint(J, c.at), [c.off ? c.off[0] : 0, c.off ? c.off[1] : 0, 0]);
-        body = textMarkup(at, c.text, c.anchor);
+        hi = textMarkup(fitText(v, at, c.text, c.anchor), c.text, c.anchor);
       }
-      return '<g opacity="' + r1(w) + '">' + body + '</g>';
-    }).join('') + carried(move, J);
+      const g = '<g opacity="' + r1(w) + '">';
+      if (lo) under += g + lo + '</g>';
+      if (hi) over += g + hi + '</g>';
+    });
+    return { under: under + carried(move, J), over };
   }
   // A bag carried in the near hand: hangs straight down from the wrist.
   function heldBag(J) {
@@ -278,9 +313,10 @@
   function svg(move, t, opts) {
     opts = opts || {};
     const p = poseAt(move, t || 0), J = solve(p);
+    const cues = opts.cues === false ? { under: carried(move, J), over: '' } : cuesMarkup(move, J, t || 0, p);
     return '<svg class="fg' + (opts.cls ? ' ' + opts.cls : '') + '" viewBox="' + viewBox(move) + '" role="img" aria-label="' + (opts.label || move.name) + '">' +
-      '<g class="fg-props">' + propMarkup(move) + '</g><g class="fg-cues">' + (opts.cues === false ? carried(move, J) : cuesMarkup(move, J, t || 0, p)) + '</g>' +
-      '<g class="fg-fig">' + figureMarkup(J, p) + '</g>' + (opts.cross ? crossBadge(move) : '') + '</svg>';
+      '<g class="fg-props">' + propMarkup(move) + '</g><g class="fg-cues">' + cues.under + '</g>' +
+      '<g class="fg-fig">' + figureMarkup(J, p) + '</g><g class="fg-labels">' + cues.over + '</g>' + (opts.cross ? crossBadge(move) : '') + '</svg>';
   }
 
   // Redraws an existing figure in place (same parts, new geometry).
@@ -289,7 +325,7 @@
     if (!el._fg) {
       const map = {};
       el.querySelectorAll('[data-p]').forEach((n) => { map[n.getAttribute('data-p')] = n; });
-      el._fg = { map, cues: el.querySelector('.fg-cues') };
+      el._fg = { map, cues: el.querySelector('.fg-cues'), labels: el.querySelector('.fg-labels') };
     }
     const map = el._fg.map;
     limbParts(J, p).forEach((q) => {
@@ -300,7 +336,11 @@
       if (map[q.name]) { map[q.name].setAttribute('d', q.d); map[q.name].setAttribute('class', q.far ? 'fg-far' : 'fg-ink'); }
       if (map[q.name + '-h']) map[q.name + '-h'].setAttribute('d', q.d);
     });
-    if (el._fg.cues) el._fg.cues.innerHTML = cuesMarkup(move, J, t, p);
+    if (el._fg.cues) {
+      const cues = cuesMarkup(move, J, t, p);
+      el._fg.cues.innerHTML = cues.under;
+      if (el._fg.labels) el._fg.labels.innerHTML = cues.over;
+    }
     return p;
   }
 

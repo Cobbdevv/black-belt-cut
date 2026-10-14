@@ -1,4 +1,4 @@
-﻿const BB = require('./logic.js');
+const BB = require('./logic.js');
 const assert = require('assert');
 let n = 0;
 function t(name, fn) { fn(); n++; console.log('ok -', name); }
@@ -76,8 +76,25 @@ t('progression targets', () => {
   assert.strictEqual(BB.earnedLevelUp('push', 2, [15, 15, 15], 3), false);
   assert.strictEqual(BB.earnedLevelUp('push', 2, [20, 20], 3), false);
   assert.strictEqual(BB.earnedLevelUp('pull', 5, [12, 12, 12], 3), false); // top of ladder
-  assert.strictEqual(BB.stretchSteps().length, 13); // both sides of every one-sided stretch
-  assert.strictEqual(BB.STRETCH_MINS, 9);
+  assert.strictEqual(BB.stretchSteps().length, 14); // even legs: both sides of every one-sided stretch
+  const rt = BB.stretchSteps('Right');
+  assert.strictEqual(rt.length, 19); // the tighter leg gets an extra half set of the 5 uneven one-sided steps (not the glutes)
+  assert.ok(rt.filter((s) => s.extra).every((s) => !s.pnf)); // extra sets are plain holds
+  assert.ok(BB.stretchSteps('Right', false).every((s) => !s.pnf)); // before contract-relax is switched on
+  assert.strictEqual(BB.pnfReady({}), false); assert.strictEqual(BB.pnfReady(Object.fromEntries(Array.from({ length: 10 }, (x, k) => ['2026-10-' + (10 + k), 5]))), true);
+  assert.deepStrictEqual(rt.slice(0, 3).map((s) => s.side + (s.extra ? '+' : '') + s.secs), ['Right90', 'Left90', 'Right+45']); // starts and finishes on it
+  assert.strictEqual(BB.stretchSteps('Left')[0].side, 'Left');
+  assert.strictEqual(BB.STRETCH_MINS, 17);
+  // Contract-relax: 15 s to ease in, then a 5 s press and 20 s of relaxing deeper, over and over
+  assert.deepStrictEqual([0, 14, 15, 19, 20, 39, 40, 44, 45].map(BB.pnfPhase), ['ease', 'ease', 'press', 'press', 'relax', 'relax', 'press', 'press', 'relax']);
+  // Flexibility checks decide the tighter leg: the right until the first check, then whichever is 5 cm or more lower
+  assert.strictEqual(BB.tightSide([]), 'Right');
+  assert.strictEqual(BB.tightSide([{ date: '2026-10-14', front: [120, 100], side: [90, 80] }]), 'Right');
+  assert.strictEqual(BB.tightSide([{ date: '2026-10-14', front: [100, 120], side: [90, 80] }]), 'Left');
+  assert.strictEqual(BB.tightSide([{ date: '2026-10-14', front: [110, 108], side: [90, 89] }]), null); // 3 cm apart: even
+  assert.strictEqual(BB.flexDue([], '2026-10-14'), true);
+  assert.strictEqual(BB.flexDue([{ date: '2026-10-14', front: [1, 1], side: [1, 1] }], '2026-11-10'), false);
+  assert.strictEqual(BB.flexDue([{ date: '2026-10-14', front: [1, 1], side: [1, 1] }], '2026-11-11'), true);
   assert.strictEqual(BB.earnedLevelUp('pull', 1, [20, 20], 2), true); // backpack rows lead on to doorframe rows
   assert.strictEqual(BB.nextFinisher([{ kind: 'full', finisher: 'boxing' }]), 'kicks');
   assert.strictEqual(BB.roundsTarget(new Array(12).fill({ kind: 'full' })), 5);

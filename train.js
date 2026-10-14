@@ -60,12 +60,12 @@ function tempoBar(m) {
   return '<div class="fg-tempo" aria-hidden="true">' + m.tempo.map((s) => '<span style="left:' + pct(s[0] / m.dur) + ';width:' + pct((s[1] - s[0]) / m.dur) + '">' + esc(s[2]) + '</span>').join('') + '<i class="fg-play"></i></div>';
 }
 // size: none = full stage with tempo bar, 'mini' = small and moving, 'thumb' = small and still.
-function guideStage(id, size) {
+function guideStage(id, size, cls) {
   const m = guideMove(id);
   if (!m) return '';
   const still = size === 'thumb' || FG.reducedMotion();
   const ratio = Math.max(1.2, Math.min(2, (m.view[2] - m.view[0]) / (m.view[3] - m.view[1])));
-  return '<div class="fg-stage' + (size ? ' fg-' + size : '') + '"' + (still ? '' : ' data-fg="' + id + '"') + (size ? '' : ' style="aspect-ratio:' + ratio.toFixed(2) + '"') + '>' +
+  return '<div class="fg-stage' + (size ? ' fg-' + size : '') + (cls ? ' ' + cls : '') + '"' + (still ? '' : ' data-fg="' + id + '"') + (size ? '' : ' style="aspect-ratio:' + ratio.toFixed(2) + '"') + '>' +
     FG.svg(m, still ? stillTime(m) : 0, { cues: !still }) + (size ? '' : tempoBar(m)) + '</div>';
 }
 function guideFrames(m) {
@@ -204,11 +204,13 @@ function exWork(d, pat, i) {
     '<span class="val">' + r + ' <small>' + unit(def) + '</small></span>' +
     '<button class="step" type="button" data-act="rep" data-pat="' + pat + '" data-i="' + k + '" data-d="1" aria-label="More">+</button>' +
     '<button class="ok" type="button" data-act="set" data-pat="' + pat + '" data-i="' + k + '" aria-pressed="' + e.done[k] + '" aria-label="Set ' + (k + 1) + ' done">' + ICON_CHECK + '</button></div>').join('');
-  return '<div class="card ex work"><div class="work-head"><button type="button" class="work-thumb" data-act="guide" data-g="' + def.guide + '" aria-label="How to do ' + esc(def.name) + '">' + guideStage(def.guide, 'mini') + '</button>' +
-    '<div><div class="ex-name">' + def.name + '</div><div class="ex-cue">' + def.cue + '</div>' + howBtn(def.guide, 'Watch the how-to') + '</div></div>' +
-    '<p class="last">' + lastLine(e, def) + ' Top of range: ' + def.max + perSide(def) + '.</p>' +
+  // On a desktop the figure gets the full stage with its tempo bar, beside the sets; on a phone it stays a small moving thumbnail.
+  const wide = typeof window !== 'undefined' && window.innerWidth >= 960;
+  return '<div class="card ex work"><div class="work-head"><button type="button" class="work-thumb" data-act="guide" data-g="' + def.guide + '" aria-label="How to do ' + esc(def.name) + '">' + guideStage(def.guide, wide ? undefined : 'mini') + '</button>' +
+    '<div class="work-title"><div class="ex-name">' + def.name + '</div><div class="ex-cue">' + def.cue + '</div>' + howBtn(def.guide, 'Watch the how-to') + '</div></div>' +
+    '<div class="work-body"><p class="last">' + lastLine(e, def) + ' Top of range: ' + def.max + perSide(def) + '.</p>' +
     '<div class="sets">' + sets + '</div>' + levelButtons(pat, e.lvl, 'Too hard', 'Too easy') +
-    '<button class="btn line block" type="button" data-act="step" data-i="' + (i + 1) + '">Next: ' + stepName(next) + '</button></div>';
+    '<button class="btn line block" type="button" data-act="step" data-i="' + (i + 1) + '">Next: ' + stepName(next) + '</button></div></div>';
 }
 ACTIONS.step = (el) => {
   if (!DRAFT) return;
@@ -330,9 +332,16 @@ const WORK_MS = 120000, REST_MS = 60000;
 function finisherStep(d) {
   const f = BB.FINISHERS[d.finisher], m = guideMove(f.guide);
   return '<div class="card intro"><div class="eyebrow">Last step · ' + plural(d.roundsTarget, 'round') + '</div><h2 class="ex-title">' + f.name + '</h2>' +
-    '<div class="intro-grid"><div class="intro-show">' + guideStage(f.guide) + '</div><div class="intro-text">' + guideSteps(m) + '</div></div></div>' + finisherCard(d);
+    '<div class="intro-grid"><div class="intro-show">' + guideStage(f.guide) + '</div><div class="intro-text">' + roundsBox(d) + guideSteps(m) + '</div></div></div>';
 }
-function finisherCard(d) {
+// The timer sits beside the figure on a desktop and right under it on a phone, so it is in view without scrolling.
+// The weaker kicking leg mostly improves from its own practice, so it leads and gets more of the kicks.
+function kickLegTip(d) {
+  const tight = BB.tightSide(flexChecks());
+  if (d.finisher !== 'kicks' || !tight) return '';
+  return '<p class="small">Lead with your ' + tight.toLowerCase() + ' leg and give it about twice the kicks of the other, until a flexibility check says they are even.</p>';
+}
+function roundsBox(d) {
   const f = BB.FINISHERS[d.finisher], r = d.round || { phase: 'idle' };
   const allDone = d.roundsDone >= d.roundsTarget;
   const label = r.phase === 'work' ? 'Round ' + (d.roundsDone + 1) + ': go' : r.phase === 'rest' ? 'Rest, then round ' + (d.roundsDone + 1) : allDone ? 'All rounds done' : 'Ready';
@@ -340,8 +349,8 @@ function finisherCard(d) {
   const controls = r.phase === 'idle'
     ? '<button class="btn grow" type="button" data-act="round-start"' + (allDone ? ' disabled' : '') + '>Start round</button>'
     : '<button class="btn ghost grow" type="button" data-act="round-pause">' + (r.paused ? 'Resume' : 'Pause') + '</button><button class="btn line grow" type="button" data-act="round-stop">Stop</button>';
-  return '<div class="card"><div class="ex-head"><div><div class="ex-name">' + f.name + '</div><div class="ex-cue">' + f.cue + '</div></div>' +
-    '<span class="lvl">' + d.roundsDone + '/' + d.roundsTarget + ' rounds</span></div>' +
+  return '<div class="rounds-box"><div class="ex-head"><div class="ex-cue">' + f.cue + '</div>' +
+    '<span class="lvl">' + d.roundsDone + '/' + d.roundsTarget + ' rounds</span></div>' + kickLegTip(d) +
     '<p class="eyebrow" style="text-align:center">' + label + '</p><div class="timer' + (r.phase === 'work' ? ' work' : '') + '" id="round-clock">' + clock(left) + '</div>' +
     '<div class="row">' + controls + '</div>' +
     '<button class="linkish" type="button" data-act="round-add" style="align-self:flex-start">Did a round without the timer? Add it</button></div>';
@@ -383,18 +392,58 @@ function stretchCard() {
     dots += '<div class="day' + (d === t ? ' today' : '') + '"><span class="dot' + (on ? ' full' : '') + '">' + (on ? ICON_CHECK.replace('stroke-width="3"', 'stroke-width="3" width="16" height="16"') : '') + '</span>' + BB.DAY_NAMES[i] + '</div>';
   }
   const done = stretchMins(t) > 0;
+  const checks = flexChecks(), tight = BB.tightSide(checks), due = BB.flexDue(checks, t);
+  const days = Object.keys(S.data.stretch || {}).filter((d) => S.data.stretch[d] > 0).length;
+  const pnfLine = days < BB.PNF_AFTER_DAYS ? ' Contract-relax (press, then relax deeper) switches on after ' + BB.PNF_AFTER_DAYS + ' stretch days, once the positions feel familiar: ' + days + ' so far.' : '';
+  const legLine = !checks.length ? 'Your right leg gets an extra set of each stretch, because it was always the stiffer one. A flexibility check will confirm it.'
+    : tight ? 'Your ' + tight.toLowerCase() + ' leg tested tighter, so it gets an extra set of each stretch.'
+      : 'Both legs tested even, so they get the same work.';
   return '<div class="card"><div class="card-head"><h2>Stretch</h2><span class="small muted">' + n + ' of 7 days this week</span></div>' +
-    '<p class="small">' + (done ? 'Done today. Flexibility comes from stretching most days, not from one long session.' : BB.STRETCH_MINS + ' minutes for your hips and kicks, after a 3-minute warm-up that it skips if you just trained. Every day you can.') + '</p>' +
+    '<p class="small">' + (done ? 'Done today. Flexibility comes from stretching most days, not from one long session.' : BB.STRETCH_MINS + ' minutes for your kicks: hamstrings, inner thighs, hip flexors, then slow leg raises for height. After a 3-minute warm-up that it skips if you just trained. Every day you can.') + '</p>' +
     '<div class="week">' + dots + '</div>' +
+    '<p class="small muted">' + legLine + pnfLine + '</p>' +
     '<div class="row"><button class="btn grow' + (done ? ' line' : '') + '" type="button" data-act="stretch-start">' + (done ? 'Stretch again' : 'Start stretching') + '</button>' +
-    (done ? '' : '<button class="btn ghost grow" type="button" data-act="stretch-log">Did it without the timer</button>') + '</div></div>';
+    (done ? '' : '<button class="btn ghost grow" type="button" data-act="stretch-log">Did it without the timer</button>') + '</div>' +
+    '<button class="linkish" type="button" data-act="flex-check" style="align-self:flex-start">' + (due ? 'Flexibility check due · 3 minutes' : 'Flexibility check · next one in ' + plural(BB.FLEX_EVERY_DAYS - BB.daysBetween(checks[checks.length - 1].date, t), 'day')) + '</button></div>';
 }
+// ---------- Flexibility check: every 4 weeks, both legs, so you can see the range coming back and which leg needs more ----------
+function flexSheet() {
+  const checks = flexChecks(), last = checks[checks.length - 1];
+  const box = (id, label, v) => '<div class="field grow"><label for="' + id + '">' + label + '</label><input class="input" id="' + id + '" inputmode="numeric" autocomplete="off" placeholder="cm" value="' + (v == null ? '' : v) + '"></div>';
+  const hist = checks.length ? '<table class="small" style="width:100%;text-align:left"><tr><th>Date</th><th>Front L / R</th><th>Side L / R</th></tr>' +
+    checks.slice(-6).reverse().map((c) => '<tr><td>' + BB.niceDate(c.date) + '</td><td>' + c.front[0] + ' / ' + c.front[1] + '</td><td>' + c.side[0] + ' / ' + c.side[1] + '</td></tr>').join('') + '</table>' : '';
+  return '<form data-form="flex-check" style="display:flex;flex-direction:column;gap:14px"><div class="eyebrow">Every 4 weeks</div><h2>Flexibility check</h2>' +
+    '<p class="small">Warm up first (the stretch routine\'s warm-up is enough). Stand side-on to a wall, a hand on a chair for balance.</p>' +
+    '<ol class="fg-steps"><li><b>Front:</b> raise one straight leg in front of you, slowly, as high as you can control, and hold 2 seconds. Someone marks your heel height on the wall, or film it next to a tape measure.</li>' +
+    '<li><b>Side:</b> the same, raising the leg out to the side with your toes pointing forward.</li>' +
+    '<li>Measure from the floor to the heel in cm. No swinging, no leaning back, knee straight. Best of 2 tries per leg.</li></ol>' +
+    '<div class="row">' + box('fx-fl', 'Front · left', last && last.front[0]) + box('fx-fr', 'Front · right', last && last.front[1]) + '</div>' +
+    '<div class="row">' + box('fx-sl', 'Side · left', last && last.side[0]) + box('fx-sr', 'Side · right', last && last.side[1]) + '</div>' +
+    '<p class="small muted">A leg 5 cm or more lower in total gets an extra set of every stretch until they even out.</p>' +
+    '<button class="btn block" type="submit">Save check</button>' + hist + '</form>';
+}
+ACTIONS['flex-check'] = () => openSheet(flexSheet());
+FORMS['flex-check'] = (f) => {
+  const v = ['#fx-fl', '#fx-fr', '#fx-sl', '#fx-sr'].map((k) => Number(String(f.querySelector(k).value).trim()));
+  if (v.some((x) => !Number.isFinite(x) || x < 10 || x > 220 || Math.round(x) !== x)) { toast('Enter all four heights in whole cm, between 10 and 220.'); return; }
+  const p = S.data.profile, rec = { date: today(), front: [v[0], v[1]], side: [v[2], v[3]] };
+  p.flex = flexChecks().filter((c) => c.date !== rec.date).concat(rec);
+  save('profile');
+  const tight = BB.tightSide(p.flex);
+  closeSheet(); render();
+  toast(tight ? 'Saved. Your ' + tight.toLowerCase() + ' leg gets the extra set.' : 'Saved. Both legs are even, so they get the same work.');
+};
 function stretchLeft(st) { return st.paused ? st.left : st.end - Date.now(); }
 // Warm tissue stretches further and more safely, so the routine opens with the 3-minute warm-up,
 // unless a workout ended in the last 45 minutes and you are already warm.
 const WARM_FOR_MS = 45 * 60000;
 function justTrained() { const now = Date.now(); return S.data.sessions.some((s) => s.endedAt && now - s.endedAt < WARM_FOR_MS); }
-function stretchPlan(warm) { return (warm ? [] : BB.WARMUP.map((x) => Object.assign({ warm: true }, x))).concat(BB.stretchSteps()); }
+const flexChecks = () => (S.data.profile.flex || []);
+function stretchPlan(warm) { return (warm ? [] : BB.WARMUP.map((x) => Object.assign({ warm: true }, x))).concat(BB.stretchSteps(BB.tightSide(flexChecks()), BB.pnfReady(S.data.stretch))); }
+// Contract-relax steps: what to do right now, so the timer can coach the press and the relax.
+const PNF_SAY = { ease: 'Ease into the stretch', press: 'Press at half effort · breathe out', relax: 'Relax and sink deeper' };
+function pnfAt(st) { const s = st.plan[st.i]; return s && s.pnf && !st.paused ? BB.pnfPhase(Math.floor((s.secs * 1000 - stretchLeft(st)) / 1000)) : null; }
+const pnfHow = (s) => 'Ease in for 15 s. Then press your ' + s.pnf + ' at half effort for 5 s, breathing out. Relax and sink a little deeper for 20 s. The timer beeps each change.';
 function stretchSheet() {
   const st = S.ui.st, plan = st.plan;
   if (st.done) {
@@ -405,10 +454,15 @@ function stretchSheet() {
   const s = plan[st.i], m = guideMove(s.guide);
   const nWarm = plan.filter((x) => x.warm).length, nStretch = plan.length - nWarm;
   const head = s.warm ? 'Warm-up · ' + (st.i + 1) + ' of ' + nWarm : 'Stretch · ' + (st.i - nWarm + 1) + ' of ' + nStretch;
-  const say = !m ? '' : s.warm ? m.steps[1] + (s.cue ? ' (' + s.cue + ')' : '') : m.steps[2];
+  const say = !m ? '' : s.warm ? m.steps[1] + (s.cue ? ' (' + s.cue + ')' : '') : s.pnf ? pnfHow(s) : s.held ? 'Hold at about 5 out of 10. Breathe slowly, and ease a little deeper each time you breathe out.' : m.steps[2];
   const warmNote = !s.warm && st.i === nWarm && st.warm ? '<p class="small muted" style="text-align:center">You just trained, so you are warm. Straight into the stretches.</p>' : '';
-  return '<div class="eyebrow">' + head + '</div><h2>' + esc(m ? m.name : s.guide) + (s.side ? ' · ' + s.side : '') + '</h2>' + warmNote +
-    guideStage(s.guide) + '<div class="timer" id="st-clock">' + clock(stretchLeft(st)) + '</div>' +
+  const side = s.side ? ' · ' + s.side + (s.extra ? ' again' : '') : '';
+  const extraNote = s.extra ? '<p class="small muted" style="text-align:center">Extra set for your tighter leg, until both legs test even.</p>'
+    : !s.warm && st.i === nWarm ? '<p class="small muted" style="text-align:center">Stretch to about 5 out of 10: firm, but you can still breathe slowly and talk. Never sharp pain, never bounce. Tingling down the leg or a pinch at the front of the hip means ease off.</p>' : '';
+  const phase = pnfAt(st);
+  return '<div class="eyebrow">' + head + '</div><h2>' + esc(m ? m.name : s.guide) + side + '</h2>' + warmNote + extraNote +
+    guideStage(s.guide, undefined, 'st-stage') + '<div class="timer" id="st-clock">' + clock(stretchLeft(st)) + '</div>' +
+    (s.pnf ? '<p class="eyebrow" id="st-phase" style="text-align:center">' + (phase ? PNF_SAY[phase] : 'Paused') + '</p>' : '') +
     (say ? '<p class="small" style="text-align:center">' + esc(say) + '</p>' : '') +
     '<div class="row"><button class="btn ghost grow" type="button" data-act="stretch-pause">' + (st.paused ? 'Resume' : 'Pause') + '</button>' +
     '<button class="btn line grow" type="button" data-act="stretch-next">' + (st.i + 1 < plan.length ? 'Next' : 'Finish') + '</button></div>' +
@@ -427,7 +481,7 @@ function stretchGo(i) {
   st.spent = stretchSpent(st);
   if (i >= plan.length) { st.end = null; stretchFinish(); return; }
   const otherSide = i > 0 && plan[i - 1].guide === plan[i].guide;
-  st.i = i; st.end = Date.now() + plan[i].secs * 1000; st.paused = false;
+  st.i = i; st.end = Date.now() + plan[i].secs * 1000; st.paused = false; st.phase = null;
   beep(otherSide ? 520 : 660, 200, otherSide ? 2 : 1);
   openSheet(stretchSheet());
 }
@@ -493,7 +547,18 @@ TICKS.push(() => {
   const st = S.ui.st;
   if (!st || st.done || st.paused) return;
   const left = st.end - Date.now();
-  if (left > 0) { const c = document.getElementById('st-clock'); if (c) c.textContent = clock(left); return; }
+  if (left > 0) {
+    const c = document.getElementById('st-clock'); if (c) c.textContent = clock(left);
+    // Contract-relax: a high beep to press, a low one to relax, and the words under the clock.
+    const ph = pnfAt(st);
+    if (ph && ph !== st.phase) {
+      if (st.phase) beep(ph === 'press' ? 880 : 440, 150, 1);
+      st.phase = ph;
+      const e = document.getElementById('st-phase'); if (e) e.textContent = PNF_SAY[ph];
+    }
+    return;
+  }
+  st.phase = null;
   stretchGo(st.i + 1);
 });
 

@@ -184,30 +184,70 @@
     boxing: { name: 'Boxing rounds', guide: 'boxing', cue: 'Shadowbox: jab, cross, hook, uppercut. Stay light on your feet and breathe out on every punch.' },
     kicks: { name: 'Kick rounds', guide: 'kicks', cue: 'Front kicks, roundhouse kicks and knees at a controlled speed. Switch sides every 30 seconds.' },
   };
-  // 3 minutes, played back to back before every full workout.
+  // 3 minutes, played back to back before every workout and stretch. Front and side leg swings, rising in height,
+  // are the kick-specific part: they don't build much lasting range, but they open up the range you have before kicking.
   const WARMUP = [
-    { guide: 'arm-circles', secs: 30 },
-    { guide: 'leg-swings', secs: 40, cue: '10 swings per leg' },
-    { guide: 'jumping-jacks', secs: 40, cue: 'or march on the spot' },
-    { guide: 'boxing', secs: 70, cue: 'easy and loose' },
+    { guide: 'jumping-jacks', secs: 30, cue: 'or march on the spot' },
+    { guide: 'arm-circles', secs: 20 },
+    { guide: 'leg-swings', secs: 40, cue: '10 swings per leg, a little higher each time' },
+    { guide: 'side-leg-swings', secs: 40, cue: '10 swings per leg, a little higher each time' },
+    { guide: 'boxing', secs: 50, cue: 'easy and loose' },
   ];
-  // Daily stretching, 9 minutes. 45 s per side every day puts each muscle past 5 minutes a week, where the bigger
-  // range-of-motion gains show up; the slow leg raises turn that range into kick height.
+  // Daily kick-flexibility routine, about 16 minutes. Built from an Oct 2026 evidence review:
+  // - Range gains level off at about 10 min of stretching per muscle per week per leg (Ingram 2025, 189 studies), so
+  //   the muscles that limit kicks (hamstrings, inner thighs, hip flexors, hip rotators) each get 60-90 s a day.
+  // - Contract-relax (pnf) builds range at least as well as plain holds (Konrad 2024), with a press at about half effort
+  //   (Sheard & Paine 2010). It switches on after the first 10 stretch days, once the positions are familiar.
+  // - Stretch at 5-6 out of 10: harder adds no range, and gentler stretching built more usable range in dancers (Wyon 2013).
+  // - Stretching one leg barely helps the other over weeks (Nelson 2012), so the tighter leg gets its own extra half set.
+  // - Kick height needs active range too: slow straight-leg raises held at the top turn passive range into usable height.
+  // - Leg swings build only half the range of holds, so they live in the warm-up, before kicking.
+  // pnf: ease in for 15 s, then rounds of a 5 s press and 20 s of relaxing deeper. even: no extra set for the tighter leg.
   const STRETCH = [
-    { guide: 'hamstring-stretch', secs: 45, sides: true },
-    { guide: 'hip-flexor-stretch', secs: 45, sides: true },
-    { guide: 'glute-stretch', secs: 45, sides: true },
-    { guide: 'side-lunge-stretch', secs: 45, sides: true },
-    { guide: 'butterfly', secs: 60 },
-    { guide: 'front-leg-raise', secs: 30, sides: true },
-    { guide: 'side-leg-raise', secs: 30, sides: true },
+    { guide: 'hamstring-stretch', secs: 90, sides: true, pnf: 'heel down into the towel' },
+    { guide: 'side-lunge-stretch', secs: 60, sides: true },
+    { guide: 'butterfly', secs: 90, pnf: 'knees up into your hands' },
+    { guide: 'straddle-stretch', secs: 60 },
+    { guide: 'hip-flexor-stretch', secs: 60, sides: true },
+    { guide: 'glute-stretch', secs: 60, sides: true, even: true },
+    { guide: 'front-leg-raise', secs: 40, sides: true },
+    { guide: 'side-leg-raise', secs: 40, sides: true },
   ];
-  function stretchSteps() {
-    const out = [];
-    STRETCH.forEach((s) => { if (s.sides) out.push(Object.assign({ side: 'Left' }, s), Object.assign({ side: 'Right' }, s)); else out.push(s); });
+  const PNF_EASE = 15, PNF_ROUND = 25, PNF_PRESS = 5, PNF_AFTER_DAYS = 10;
+  // Where a contract-relax step is at `secs` seconds in: easing in, pressing, or relaxing deeper.
+  function pnfPhase(secs) {
+    if (secs < PNF_EASE) return 'ease';
+    return (secs - PNF_EASE) % PNF_ROUND < PNF_PRESS ? 'press' : 'relax';
+  }
+  // The tighter leg gets an extra half set (a plain hold) of the one-sided steps, about 1.5x the time, and starts and
+  // finishes each pair. Before contract-relax is switched on (pnfOn false), those steps are plain holds too.
+  function stretchSteps(tight, pnfOn) {
+    // held: a contract-relax step run as a plain hold, so the screen says "hold", not "press".
+    const out = [], base = (s) => (pnfOn === false && s.pnf ? Object.assign({}, s, { pnf: null, held: true }) : s);
+    STRETCH.forEach((s0) => {
+      const s = base(s0);
+      if (!s.sides) { out.push(s); return; }
+      const first = tight === 'Left' ? 'Left' : 'Right', other = first === 'Left' ? 'Right' : 'Left';
+      out.push(Object.assign({ side: first }, s), Object.assign({ side: other }, s));
+      if (tight && !s.even) out.push(Object.assign({}, s, { side: tight, extra: true, pnf: null, held: !!(s.pnf || s.held), secs: Math.max(30, Math.round(s.secs / 2 / 5) * 5) }));
+    });
     return out;
   }
-  const STRETCH_MINS = Math.round(stretchSteps().reduce((a, s) => a + s.secs, 0) / 60);
+  const pnfReady = (stretchLog) => Object.keys(stretchLog || {}).filter((d) => stretchLog[d] > 0).length >= PNF_AFTER_DAYS;
+  const STRETCH_MINS = Math.round(stretchSteps('Right').reduce((a, s) => a + s.secs, 0) / 60);
+  // Flexibility checks: heel height (cm) of a slow straight-leg raise held 2 s, front and side, left and right.
+  // The leg that is 5 cm or more lower in total is the tighter one. Until the first check, trust what he told us: the right.
+  const FLEX_GAP_CM = 5, FLEX_EVERY_DAYS = 28;
+  function tightSide(checks) {
+    const last = (checks || [])[(checks || []).length - 1];
+    if (!last) return 'Right';
+    const l = last.front[0] + last.side[0], r = last.front[1] + last.side[1];
+    return Math.abs(l - r) < FLEX_GAP_CM ? null : l < r ? 'Left' : 'Right';
+  }
+  function flexDue(checks, today) {
+    const last = (checks || [])[(checks || []).length - 1];
+    return !last || daysBetween(last.date, today) >= FLEX_EVERY_DAYS;
+  }
   function levelDef(pattern, level) {
     const lv = LADDERS[pattern].levels;
     return lv[Math.max(1, Math.min(lv.length, level)) - 1];
@@ -297,7 +337,7 @@
     trendSeries, latestTrend, slopePerWeek, projectGoalDate, isStalled,
     BASE_HABITS, LEVERS, activeHabits, goodDayNeed, dayDone, isGoodDay, habitStreak, missedYesterday,
     sessionsInWeek, weekStreak,
-    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, WARMUP, STRETCH, stretchSteps, STRETCH_MINS, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
+    ORDER, LADDERS, DEFAULT_LEVELS, FINISHERS, WARMUP, STRETCH, stretchSteps, STRETCH_MINS, pnfPhase, pnfReady, PNF_EASE, PNF_ROUND, PNF_PRESS, PNF_AFTER_DAYS, tightSide, flexDue, FLEX_GAP_CM, FLEX_EVERY_DAYS, levelDef, lastAtLevel, targetsFor, earnedLevelUp, roundsTarget, nextFinisher,
     lastActiveDate,
   };
   root.BB = BB;

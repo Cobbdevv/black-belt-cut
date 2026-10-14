@@ -23,6 +23,13 @@ for (const id of ids) {
 }
 ok('all ' + ids.length + ' moves render cleanly through their whole loop');
 
+// The stage clips at the viewBox once the figure fills its width, so labels are slid inside it. One wider than the picture can't be.
+const wide = [];
+ids.forEach((id) => { const m = MOVES.get(id); (m.cues || []).forEach((c) => { if (c.text && c.text.length * 2.99 > m.view[2] - m.view[0] - 4) wide.push(id + ': ' + c.text); }); });
+assert.deepStrictEqual(wide, [], 'every cue label fits across its picture');
+assert.match(FG.svg(MOVES.get('side-plank'), 2.3), /<g class="fg-fig">[\s\S]*<g class="fg-labels"><g opacity="1"><text class="fg-text" x="-28\.1"/, 'labels draw over the figure, slid inside the picture');
+ok('cue labels fit inside their pictures and draw on top of the figure');
+
 const floorIssues = [], reachIssues = [];
 for (const id of ids) {
   const m = MOVES.get(id);

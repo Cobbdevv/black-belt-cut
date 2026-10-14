@@ -92,7 +92,9 @@ function chartCard(series, p) {
   let pts = series.filter((x) => x.date >= xMin);
   if (pts.length < 2) { pts = series.slice(-2); xMin = pts[0].date; }
   const span = Math.max(7, BB.daysBetween(xMin, t));
-  const W = 340, H = 210, L = 34, R = 44, T = 12, B = 26;
+  // On a desktop the chart spans both columns, so it gets a wider drawing; otherwise the text and marks scale up 3×.
+  const wide = typeof window !== 'undefined' && window.innerWidth >= 960;
+  const W = wide ? 720 : 340, H = wide ? 260 : 210, L = 34, R = 44, T = 12, B = 26;
   const paceFrom = xMin > p.startDate ? xMin : p.startDate;
   const vals = pts.map((x) => x.kg).concat(pts.map((x) => x.trend), [paceAt(p, paceFrom), paceAt(p, t)]);
   let yMin = Math.floor(Math.min.apply(null, vals) - 0.5), yMax = Math.ceil(Math.max.apply(null, vals) + 0.5);
@@ -334,6 +336,9 @@ ACTIONS['import-no'] = () => { S.ui.importData = null; render(); };
 
 // ---------- Boot ----------
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.ui.loaded && document.getElementById('sheet').hidden) scheduleRender(); });
+// The sets view and the weight chart draw differently on either side of 960 px, so crossing it re-renders.
+let wasWide = window.innerWidth >= 960;
+if (window.addEventListener) window.addEventListener('resize', () => { const wide = window.innerWidth >= 960; if (wide !== wasWide && S.ui.loaded) { wasWide = wide; scheduleRender(); } });
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { /* offline install not available here */ });
 // A link like .../#status opens straight on that tab.
 const startTab = String(location.hash || '').slice(1);

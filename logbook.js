@@ -136,11 +136,18 @@
     line();
 
     const stretchDays = Object.keys(data.stretch || {}).filter(inRange).sort();
-    line('## Stretching (' + BB.STRETCH_MINS + '-minute routine: hamstrings, hip flexors, glutes, inner thighs, leg raises)');
+    line('## Stretching (' + BB.STRETCH_MINS + '-minute kick routine: contract-relax hamstrings and inner thighs, hip flexors, glutes, straddle, slow leg raises; extra half set on the tighter leg)');
     if (!stretchDays.length) line('- None logged.');
     else {
       line('- Stretched on ' + stretchDays.length + ' of ' + span + (span === 1 ? ' day' : ' days') + ', ' + stretchDays.reduce((a, d) => a + (data.stretch[d] || 0), 0) + ' minutes in total.');
       if (span <= 45) line('- Days: ' + stretchDays.map((d) => shortDay(d) + ' (' + data.stretch[d] + ' min)').join(', ') + '.');
+    }
+    const flex = (p.flex || []);
+    if (flex.length) {
+      line('- Flexibility checks (heel height of a slow straight-leg raise held 2 s, cm, left / right):');
+      flex.slice(-4).forEach((c) => line('  - ' + c.date + ': front ' + c.front[0] + ' / ' + c.front[1] + ', side ' + c.side[0] + ' / ' + c.side[1]));
+      const tight = BB.tightSide(flex);
+      line('- ' + (tight ? 'Tighter leg: ' + tight.toLowerCase() + ' (gets the extra set).' : 'Legs are even.'));
     }
     line();
 
