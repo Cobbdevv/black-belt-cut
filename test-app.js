@@ -57,9 +57,17 @@ assert.match(sv, /qs-row t-A"><span class="qs-name">Potential<\/span><span class
 ok('status window shows the estimates, potential A, willpower measuring');
 
 // 3. Awakening Trial through the quest form
-run('FORMS.trial')(form({ '[name="str"]': '15', '[name="dur"]': '1:25', '[name="spd"]': '31', '[name="end"]': '' }, {}));
+assert.match(view(), /data-group="strstyle"/); assert.match(view(), /At 101\.6 kg, each full push-up lifts about 65 kg and each knee push-up about 50 kg/);
+assert.match(view(), /class="chip on" data-act="str-style" data-v="knee"/); // on knee push-ups in training, so the test starts there
+run('FORMS.trial')(form({ '[name="str"]': '15', '[name="dur"]': '1:25', '[name="spd"]': '31', '[name="end"]': '' }, { strstyle: 'knee' }));
 assert.match(sheet(), /Measured below your estimate/); assert.match(sheet(), /Confirmed/); assert.doesNotMatch(sheet(), /END/);
 assert.strictEqual(run('S.data.ranks.tests[0].dur'), 85);
+assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.data.ranks.tests[0])')), { date: run('today()'), str: run(`RK.pressKg(15, 'knee', 101.6)`), strReps: 15, strStyle: 'knee', strBw: 101.6, dur: 85, spd: 31, tag: 'awakening' });
+assert.strictEqual(run('currentQuest().progress.strReps'), 15); assert.strictEqual(run('currentQuest().progress.strStyle'), 'knee');
+run(`S.ui.tab = 'status'; render();`);
+assert.match(view(), /Best ≈75 kg press \(15 knee push-ups at 101\.6 kg\) · C- at 17 knee/); clean(view(), 'status after the trial');
+assert.match(view(), /<td>75 kg<br><span class="muted">15 knee<\/span><\/td>/); // trial history
+assert.match(view(), /value="15"/); // the quest form shows the push-ups, not the kg
 assert.strictEqual(run('currentQuest().cleared'), false);
 run('FORMS.trial')(form({ '[name="str"]': '', '[name="dur"]': '', '[name="spd"]': '', '[name="end"]': '25' }, {}));
 assert.strictEqual(run('currentQuest().cleared'), true);
@@ -97,7 +105,7 @@ run('ACTIONS.checkin()');
 run('FORMS.checkin')(form({ '#ci-waist': '', '#ci-note': 'birthday cake' }, { rating: 4 }));
 assert.match(sheet(), /System analysis/); clean(sheet(), 'check-in');
 const txt = run('weekText()');
-assert.match(txt, /Ranks: STR D, DUR D\+, SPD C, END D-, TEC C-/); assert.match(txt, /birthday cake/);
+assert.match(txt, /Ranks: STR D\+, DUR D\+, SPD C, END D-, TEC C-/); assert.match(txt, /birthday cake/);
 ok('check-in analysis and Copy my week text');
 
 // 7. Every tab renders cleanly
@@ -142,6 +150,10 @@ run('ACTIONS.trial()');
 assert.match(sheet(), /Start stopwatch/); assert.match(sheet(), /Start 30 s timer/); assert.match(sheet(), /Paste your results/);
 run(`ACTIONS['tr-paste']({ closest: () => ({ querySelector: () => ({ value: 'push-ups 21, plank 1:50, kicks 33, burpees 29' }) }) })`);
 assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.ui.trialDraft)')), { str: '21', dur: '1:50', spd: '33', end: '29' });
+run(`ACTIONS['tr-paste']({ closest: () => ({ querySelector: () => ({ value: '14 knee push-ups' }) }) })`);
+assert.strictEqual(run('S.ui.trialDraft.strStyle'), 'knee'); assert.strictEqual(run('S.ui.trialDraft.str'), '14');
+run(`ACTIONS['str-style']({ dataset: { v: 'full' } })`); assert.strictEqual(run('S.ui.trialDraft.strStyle'), 'full');
+run('ACTIONS.trial()'); assert.match(sheet(), /class="chip on" data-act="str-style" data-v="full"/); // the style you picked survives a redraw
 run(`ACTIONS['tt-start']({ dataset: { k: 'dur' } })`);
 run('S.ui.tt.t0 = Date.now() - 3100'); run('TICKS.forEach((f) => f())');
 assert.strictEqual(run('S.ui.tt.phase'), 'run');
@@ -166,7 +178,7 @@ run(`S.ui.tab = 'today'; render();`); assert.match(view(), /Training log/);
 run('FORMS.note')(form({ '#note-in': 'Slept 6 hours, hungry late at night' }, {}));
 assert.strictEqual(run('S.data.notes[today()][0].text'), 'Slept 6 hours, hungry late at night');
 const log = run('LOGBOOK.text(S.data, { today: today(), days: null })');
-for (const part of ['## About me', '## Where I am now', '## Benchmarks', 'Month 1', '## Workouts', 'Left knee a bit sore', 'effort Hard', '## Eating rules', '## My notes', 'Slept 6 hours']) assert.ok(log.includes(part), 'log has ' + part);
+for (const part of ['## About me', '## Where I am now', '## Benchmarks', 'Month 1', 'STR C (best ≈86 kg press (22 knee push-ups at 101.6 kg))', '| Strength from max push-ups | ≈75 kg press (15 knee push-ups at 101.6 kg) | ≈86 kg press', '## Workouts', 'Left knee a bit sore', 'effort Hard', '## Eating rules', '## My notes', 'Slept 6 hours']) assert.ok(log.includes(part), 'log has ' + part);
 clean(log, 'log');
 assert.ok(run('LOGBOOK.text(S.data, { today: today(), days: 7 })').length < log.length + 1);
 run(`S.ui.tab = 'progress'; render();`); assert.match(view(), /Copy for Claude/); clean(view(), 'progress');
@@ -187,19 +199,25 @@ ok('a corrected starting weight replaces the guessed weigh-in and never fakes a 
 run(`closeSheet(); S.data.stretch = {}; for (let k = 21; k < 31; k++) S.data.stretch[BB.addDays(today(), -k)] = 17; S.data.sessions.forEach((s) => { if (s.endedAt) s.endedAt = Date.now() - 7200000; }); S.ui.tab = 'today'; render();`);
 assert.match(view(), /Start stretching/); assert.match(view(), /0 of 7 days this week/);
 run(`ACTIONS['stretch-start']()`);
-assert.match(sheet(), /Warm-up · 1 of 5/); assert.match(sheet(), /Skip the warm-up/); clean(sheet(), 'stretch warm-up');
-run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+assert.match(sheet(), /Warm-up · 1 of 5/); assert.match(sheet(), /Skip the warm-up/); assert.match(sheet(), /Up next: Arm circles/); clean(sheet(), 'stretch warm-up');
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); run('TICKS.forEach((f) => f())');
+assert.match(sheet(), /Warm-up · 1 of 5/); assert.match(sheet(), /Next: Arm circles/); // time's up: it waits for a tap
+run(`ACTIONS['stretch-next']()`);
 assert.match(sheet(), /Warm-up · 2 of 5/);
 run(`ACTIONS['stretch-skip-warm']()`);
 assert.strictEqual(run('S.ui.st.spent'), 0); // warm-up time is not stretching time
 assert.match(sheet(), /Stretch · 1 of 19/); assert.match(sheet(), /Lying hamstring stretch · Right/); assert.match(sheet(), /Ease into the stretch/); assert.match(sheet(), /about 5 out of 10/); assert.match(sheet(), /data-fg="hamstring-stretch"/); clean(sheet(), 'stretch');
 assert.match(sheet(), /class="fg-stage st-stage" data-fg=/, 'the stretch figure is marked so it keeps a minimum size');
+assert.match(sheet(), /Up next: Other side: Left/);
 run('S.ui.st.end = Date.now() + 73000'); run('TICKS.forEach((f) => f())'); // 17 s into the 90 s contract-relax hold: the first press
 assert.strictEqual(run('S.ui.st.phase'), 'press');
 run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-assert.match(sheet(), /Lying hamstring stretch · Left/);
-run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-assert.match(sheet(), /Lying hamstring stretch · Right again/); assert.match(sheet(), /Extra set for your tighter leg/); // the right leg gets an extra half set
+assert.match(sheet(), /Lying hamstring stretch · Right/); assert.match(sheet(), /Next: Other side: Left/); // time's up: it waits for a tap
+assert.doesNotMatch(sheet(), /stretch-pause/); assert.doesNotMatch(sheet(), /st-phase/);
+run(`ACTIONS['stretch-next']()`);
+assert.match(sheet(), /Lying hamstring stretch · Left/); assert.match(sheet(), /Up next: Right again, extra set/);
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); run(`ACTIONS['stretch-next']()`);
+assert.match(sheet(), /Lying hamstring stretch · Right again/); assert.match(sheet(), /Up next: Side lunge stretch · Right/); assert.match(sheet(), /Extra set for your tighter leg/); // the right leg gets an extra half set
 assert.doesNotMatch(sheet(), /Ease into the stretch/); // and it is a plain hold
 run('closeSheet()');
 assert.strictEqual(run('S.ui.st'), null); assert.strictEqual(run('S.data.stretch[today()]'), 3); // closing mid-way stops, and keeps the 3+ minutes done
@@ -222,8 +240,8 @@ ok('stretching: guided routine with side switches, honest minutes, closing stops
 // 15. Closing the stretch routine after a minute or more keeps the time; under a minute it logs nothing
 run(`closeSheet(); S.data.stretch = {};`);
 run(`ACTIONS['stretch-start']()`); run(`ACTIONS['stretch-skip-warm']()`);
-run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
-run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 90-second holds done
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); run(`ACTIONS['stretch-next']()`);
+run('S.ui.st.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); // two 90-second holds done, waiting on the second
 run('closeSheet()');
 assert.strictEqual(run('S.data.stretch[today()]'), 3); // 180 s is 3 minutes
 ok('closing the stretch routine early keeps the minutes already done');
@@ -271,6 +289,22 @@ const newShort = run(`LOGBOOK.text({ profile: S.data.profile, sessions: [{ date:
 assert.ok(newShort.includes('no warm-up'), 'a skipped warm-up on a new short workout is flagged');
 run('closeSheet()');
 ok('warm-ups: short workouts get one, old drafts keep their place, stretching after a workout skips it');
+
+// 15c. The workout warm-up also waits for a tap when a move's time is up, and says what's next
+run(`closeSheet(); DRAFT = null; saveDraft(); ACTIONS.start({ dataset: { kind: 'full' } }); ACTIONS['warm-start']()`);
+assert.match(view(), /move 1 of 5/); assert.match(view(), /Up next: Arm circles/);
+run('DRAFT.warm.end = Date.now() - 1'); run('TICKS.forEach((f) => f())'); run('TICKS.forEach((f) => f())'); run('render()');
+assert.match(view(), /move 1 of 5/); assert.match(view(), /Next: Arm circles/); assert.strictEqual(run('DRAFT.warm.over'), true);
+run(`ACTIONS['warm-next']()`);
+assert.match(view(), /move 2 of 5/);
+for (let i = 0; i < 3; i++) run(`ACTIONS['warm-next']()`);
+assert.match(view(), /move 5 of 5/); assert.match(view(), /Up next: your first exercise/);
+run('DRAFT.warm.end = Date.now() - 1'); run('TICKS.forEach((f) => f())');
+assert.strictEqual(run('DRAFT.warmup'), true); // last move timed out: the warm-up counts even without tapping Finish
+run(`ACTIONS.step({ dataset: { i: '1' } })`);
+assert.match(view(), /Exercise 1 of 5/);
+run(`DRAFT = null; saveDraft(); render()`);
+ok('workout warm-up: waits for a tap when time is up, shows the next move');
 
 // 16. Questism-style status window: tier colour class, rank letter and a 7-segment bar
 run(`S.ui.tab = 'status'; render();`);

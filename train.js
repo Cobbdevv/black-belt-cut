@@ -261,20 +261,26 @@ function warmupStep(d, i) {
   const w = d.warm;
   if (!w) {
     return '<div class="card intro"><div class="eyebrow">Step 1 · 3 minutes</div><h2 class="ex-title">Warm-up</h2>' +
-      '<p class="small">Four moves back to back. The timer runs each one and moves you on, so you only have to follow the figure.</p>' +
+      '<p class="small">' + BB.WARMUP.length + ' moves back to back. The timer counts each one down, then you tap to start the next.</p>' +
       '<div class="warm-grid">' + BB.WARMUP.map((x, j) => {
         const m = guideMove(x.guide);
         return '<div class="warm-item">' + guideStage(x.guide, 'mini') + '<b>' + (j + 1) + '. ' + esc(m ? m.name : x.guide) + '</b><span class="small muted">' + x.secs + ' s' + (x.cue ? ' · ' + esc(x.cue) : '') + '</span></div>';
       }).join('') + '</div>' +
       '<div class="row"><button class="btn grow" type="button" data-act="warm-start">Start warm-up</button><button class="btn line grow" type="button" data-act="warm-skip">Skip</button></div></div>';
   }
-  const x = BB.WARMUP[w.i], m = guideMove(x.guide);
+  const x = BB.WARMUP[w.i], m = guideMove(x.guide), nx = BB.WARMUP[w.i + 1];
+  const nextName = nx ? moveName(nx.guide) : null;
+  const controls = w.over
+    ? '<p class="small" style="text-align:center"><b>Time.</b> Tap when you are ready.</p>' +
+      '<button class="btn block" type="button" data-act="warm-next">' + (nextName ? 'Next: ' + esc(nextName) : 'Finish warm-up') + '</button>'
+    : '<div class="row"><button class="btn ghost grow" type="button" data-act="warm-pause">' + (w.paused ? 'Resume' : 'Pause') + '</button>' +
+      '<button class="btn line grow" type="button" data-act="warm-next">' + (nextName ? 'Next move' : 'Finish warm-up') + '</button></div>' +
+      '<p class="small muted" style="text-align:center">Up next: ' + esc(nextName || 'your first exercise') + '</p>';
   return '<div class="card intro"><div class="eyebrow">Warm-up · move ' + (w.i + 1) + ' of ' + BB.WARMUP.length + '</div><h2 class="ex-title">' + esc(m ? m.name : x.guide) + '</h2>' +
     guideStage(x.guide) + '<div class="timer" id="warm-clock">' + clock(warmLeft(w)) + '</div>' +
-    (m ? '<p class="small" style="text-align:center">' + esc(m.steps[1]) + (x.cue ? ' (' + esc(x.cue) + ')' : '') + '</p>' : '') +
-    '<div class="row"><button class="btn ghost grow" type="button" data-act="warm-pause">' + (w.paused ? 'Resume' : 'Pause') + '</button>' +
-    '<button class="btn line grow" type="button" data-act="warm-next">' + (w.i + 1 < BB.WARMUP.length ? 'Next move' : 'Finish warm-up') + '</button></div></div>';
+    (m ? '<p class="small" style="text-align:center">' + esc(m.steps[1]) + (x.cue ? ' (' + esc(x.cue) + ')' : '') + '</p>' : '') + controls + '</div>';
 }
+const moveName = (id) => { const m = guideMove(id); return m ? m.name : id; };
 function warmGo(d, idx) {
   if (idx >= BB.WARMUP.length) {
     d.warm = null; d.warmup = true;
@@ -306,7 +312,12 @@ TICKS.push(() => {
   if (!w || w.paused) return;
   const left = w.end - Date.now();
   if (left > 0) { const c = document.getElementById('warm-clock'); if (c) c.textContent = clock(left); return; }
-  warmGo(d, w.i + 1);
+  // Time's up: say so and wait for a tap rather than jumping ahead.
+  if (w.over) return;
+  w.over = true;
+  if (w.i === BB.WARMUP.length - 1) d.warmup = true; // the whole warm-up is done even if you leave through the step bar
+  beep(880, 150, 2);
+  saveDraft();
   if (S.ui.tab === 'train') scheduleRender();
 });
 
@@ -442,7 +453,7 @@ const flexChecks = () => (S.data.profile.flex || []);
 function stretchPlan(warm) { return (warm ? [] : BB.WARMUP.map((x) => Object.assign({ warm: true }, x))).concat(BB.stretchSteps(BB.tightSide(flexChecks()), BB.pnfReady(S.data.stretch))); }
 // Contract-relax steps: what to do right now, so the timer can coach the press and the relax.
 const PNF_SAY = { ease: 'Ease into the stretch', press: 'Press at half effort · breathe out', relax: 'Relax and sink deeper' };
-function pnfAt(st) { const s = st.plan[st.i]; return s && s.pnf && !st.paused ? BB.pnfPhase(Math.floor((s.secs * 1000 - stretchLeft(st)) / 1000)) : null; }
+function pnfAt(st) { const s = st.plan[st.i]; return s && s.pnf && !st.paused && !st.over ?BB.pnfPhase(Math.floor((s.secs * 1000 - stretchLeft(st)) / 1000)) : null; }
 const pnfHow = (s) => 'Ease in for 15 s. Then press your ' + s.pnf + ' at half effort for 5 s, breathing out. Relax and sink a little deeper for 20 s. The timer beeps each change.';
 function stretchSheet() {
   const st = S.ui.st, plan = st.plan;
@@ -460,12 +471,18 @@ function stretchSheet() {
   const extraNote = s.extra ? '<p class="small muted" style="text-align:center">Extra set for your tighter leg, until both legs test even.</p>'
     : !s.warm && st.i === nWarm ? '<p class="small muted" style="text-align:center">Stretch to about 5 out of 10: firm, but you can still breathe slowly and talk. Never sharp pain, never bounce. Tingling down the leg or a pinch at the front of the hip means ease off.</p>' : '';
   const phase = pnfAt(st);
+  const nx = plan[st.i + 1];
+  const nextName = !nx ? null : nx.guide === s.guide && nx.side ? (nx.extra ? nx.side + ' again, extra set' : 'Other side: ' + nx.side) : moveName(nx.guide) + (nx.side ? ' · ' + nx.side : '');
+  const controls = st.over
+    ? '<p class="small" style="text-align:center"><b>Time.</b> Tap when you are ready.</p>' +
+      '<button class="btn block" type="button" data-act="stretch-next">' + (nextName ? 'Next: ' + esc(nextName) : 'Finish') + '</button>'
+    : '<div class="row"><button class="btn ghost grow" type="button" data-act="stretch-pause">' + (st.paused ? 'Resume' : 'Pause') + '</button>' +
+      '<button class="btn line grow" type="button" data-act="stretch-next">' + (nextName ? 'Next' : 'Finish') + '</button></div>' +
+      '<p class="small muted" style="text-align:center">Up next: ' + esc(nextName || 'done') + '</p>';
   return '<div class="eyebrow">' + head + '</div><h2>' + esc(m ? m.name : s.guide) + side + '</h2>' + warmNote + extraNote +
     guideStage(s.guide, undefined, 'st-stage') + '<div class="timer" id="st-clock">' + clock(stretchLeft(st)) + '</div>' +
-    (s.pnf ? '<p class="eyebrow" id="st-phase" style="text-align:center">' + (phase ? PNF_SAY[phase] : 'Paused') + '</p>' : '') +
-    (say ? '<p class="small" style="text-align:center">' + esc(say) + '</p>' : '') +
-    '<div class="row"><button class="btn ghost grow" type="button" data-act="stretch-pause">' + (st.paused ? 'Resume' : 'Pause') + '</button>' +
-    '<button class="btn line grow" type="button" data-act="stretch-next">' + (st.i + 1 < plan.length ? 'Next' : 'Finish') + '</button></div>' +
+    (s.pnf && !st.over ? '<p class="eyebrow" id="st-phase" style="text-align:center">' + (phase ? PNF_SAY[phase] : 'Paused') + '</p>' : '') +
+    (say ? '<p class="small" style="text-align:center">' + esc(say) + '</p>' : '') + controls +
     (s.warm ? '<button class="linkish" type="button" data-act="stretch-skip-warm" style="align-self:center">Skip the warm-up, I am already warm</button>'
       : '<button class="linkish" type="button" data-act="stretch-end" style="align-self:center">Stop here and log it</button>');
 }
@@ -481,7 +498,7 @@ function stretchGo(i) {
   st.spent = stretchSpent(st);
   if (i >= plan.length) { st.end = null; stretchFinish(); return; }
   const otherSide = i > 0 && plan[i - 1].guide === plan[i].guide;
-  st.i = i; st.end = Date.now() + plan[i].secs * 1000; st.paused = false; st.phase = null;
+  st.i = i; st.end = Date.now() + plan[i].secs * 1000; st.paused = false; st.phase = null; st.over = false;
   beep(otherSide ? 520 : 660, 200, otherSide ? 2 : 1);
   openSheet(stretchSheet());
 }
@@ -532,7 +549,7 @@ ACTIONS['stretch-now'] = (el) => {
 ACTIONS['stretch-next'] = () => { if (S.ui.st && !S.ui.st.done) stretchGo(S.ui.st.i + 1); };
 ACTIONS['stretch-pause'] = () => {
   const st = S.ui.st;
-  if (!st || st.done) return;
+  if (!st || st.done || st.over) return;
   if (st.paused) { st.end = Date.now() + st.left; st.paused = false; } else { st.left = Math.max(0, st.end - Date.now()); st.paused = true; }
   openSheet(stretchSheet());
 };
@@ -558,8 +575,11 @@ TICKS.push(() => {
     }
     return;
   }
-  st.phase = null;
-  stretchGo(st.i + 1);
+  // Time's up: say so and show what's next, then wait for a tap rather than jumping ahead.
+  if (st.over) return;
+  st.over = true; st.phase = null;
+  beep(880, 150, 2);
+  openSheet(stretchSheet());
 });
 
 // ---------- Finish ----------

@@ -8,11 +8,21 @@
   const rankIdx = (name) => Math.max(0, RANKS.indexOf(name));
   const tierOf = (i) => rankName(i)[0];
 
+  // Strength is pressing strength in kg, not a push-up count, so a heavy body gets credit for the weight it lifts and losing weight alone never raises it.
+  // A full push-up lifts about 64% of your body weight and a knee push-up about 49%; reps to failure estimate your one-rep max (Epley).
+  // The rank scale is the push-up scale for a 75 kg body: at 75 kg, full push-ups rank exactly as the raw count would.
+  const PUSH_LOAD = { full: 0.64, knee: 0.49 };
+  const REF_KG = 75;
+  const PUSH_TH = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38, 42, 48, 55, 62, 72];
+  const loadOf = (style, bw) => PUSH_LOAD[style === 'knee' ? 'knee' : 'full'] * (bw || REF_KG);
+  function pressKg(reps, style, bw) { return reps > 0 ? Math.round(loadOf(style, bw) * (1 + reps / 30) * 10) / 10 : 0; }
+  function repsFor(kg, style, bw) { return Math.max(1, Math.ceil(30 * (kg / loadOf(style, bw) - 1) - 1e-9)); }
+
   // Thresholds: the minimum result for each of the 21 ranks. C is roughly average for an 18-25-year-old man, A is athletic, S is elite.
   const TESTS = {
-    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'push-ups', guide: 'pushup',
-      how: 'One set, no rest at the top. Chest to a fist\'s height from the floor, arms fully straight at the top. Stop when your form breaks.',
-      th: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38, 42, 48, 55, 62, 72] },
+    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'kg press', guide: 'pushup',
+      how: 'Full push-ups if you can do 5 or more, otherwise on your knees. One set, no rest at the top. Chest to a fist\'s height from the floor, arms fully straight at the top. Stop when your form breaks. Your body weight turns the reps into kg pressed, so either style counts.',
+      th: PUSH_TH.map((r) => pressKg(r, 'full', REF_KG)) },
     dur: { code: 'DUR', name: 'Durability', test: 'Max plank hold', unit: 's', guide: 'plank',
       how: 'Forearm plank, body in one straight line. Stop the clock when your hips sag or rise. A strong brace is what absorbs hits.',
       th: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 115, 130, 145, 160, 180, 200, 225, 255, 290, 360] },
@@ -60,11 +70,28 @@
   ].map((t, i) => ({ i, name: t[0], std: t[1], jump: i >= 16, guide: TECH_GUIDES[i] || null }));
 
   function indexFor(th, v) { let i = 0; for (let k = 0; k < th.length; k++) if (v >= th[k]) i = k; return i; }
+  // One result's strength. New results carry their reps, style and body weight; older ones were full push-ups, ranked as if at 75 kg.
+  function strOf(r) {
+    if (!r || typeof r.str !== 'number') return null;
+    if (r.strStyle) return { kg: r.str, reps: r.strReps, style: r.strStyle, bw: r.strBw || null };
+    return { kg: pressKg(r.str, 'full', REF_KG), reps: r.str, style: 'full', bw: null };
+  }
+  // The four results of one trial, with strength in kg and its push-ups alongside.
+  function testValues(r) {
+    const v = {};
+    TEST_KEYS.forEach((k) => { if (r && typeof r[k] === 'number') v[k] = r[k]; });
+    const s = strOf(r);
+    if (s) { v.str = s.kg; v.strFrom = s; }
+    return v;
+  }
+  const pushText = (s) => s.reps + (s.style === 'knee' ? ' knee' : '') + ' push-ups' + (s.bw ? ' at ' + Math.round(s.bw * 10) / 10 + ' kg' : '');
+  const strText = (s) => '≈' + Math.round(s.kg) + ' kg press (' + pushText(s) + ')';
   function bestTests(r) {
     const best = {};
-    ((r && r.tests) || []).forEach((t) => TEST_KEYS.forEach((k) => {
-      if (typeof t[k] === 'number' && (best[k] == null || t[k] > best[k])) best[k] = t[k];
-    }));
+    ((r && r.tests) || []).forEach((t) => {
+      const v = testValues(t);
+      TEST_KEYS.forEach((k) => { if (v[k] != null && (best[k] == null || v[k] > best[k])) { best[k] = v[k]; if (k === 'str') best.strFrom = strOf(t); } });
+    });
     return best;
   }
   // Willpower: last 28 complete days (fewer early on). 60% good eating days, 40% workouts done vs 3 a week. Ranked after 7 days.
@@ -99,6 +126,12 @@
         out[k] = { index: i, source: 'estimate', value: th[i], next: null, progress: 0 };
       }
     });
+    // Quests are counted in push-ups: the ones you did on your best trial, or the push-ups your estimate stands for.
+    const sf = best.strFrom;
+    if (sf) {
+      out.str.from = sf; out.str.reps = sf.reps;
+      if (out.str.next && sf.bw) out.str.next.reps = repsFor(out.str.next.need, sf.style, sf.bw);
+    } else out.str.reps = PUSH_TH[out.str.index];
     const tech = r.tech || {};
     if (tech.assessed) {
       const n = Math.min(20, (tech.mastered || []).length);
@@ -129,7 +162,7 @@
         { id: 'squats', text: sq + ' squats for time, straight after the last round', target: sq, unit: 'squats', step: [5, 10], guides: ['squat'] }] };
     },
     str(st) {
-      const v = Math.max(8, st.str.value), push = Math.max(30, 5 * v), sq = Math.round((push * 1.5) / 5) * 5;
+      const v = Math.max(8, st.str.reps), push = Math.max(30, 5 * v), sq = Math.round((push * 1.5) / 5) * 5;
       return { title: 'Hundred Hands', text: 'Finish inside 40 minutes. Split the sets however you need.', objectives: [
         { id: 'push', text: push + ' push-ups, any variation from your level', target: push, unit: 'push-ups', step: [1, 5], guides: ['pushup'] },
         { id: 'rows', text: push + ' doorframe rows', target: push, unit: 'rows', step: [1, 5], guides: ['door-row'] },
@@ -159,7 +192,7 @@
   };
   // The boss week: every stat in one session, scaled from your results.
   TEMPLATES.gate = (st) => {
-    const push = Math.max(6, Math.round(st.str.value * 0.5)), plank = Math.max(30, Math.round(st.dur.value * 0.5 / 5) * 5);
+    const push = Math.max(6, Math.round(st.str.reps * 0.5)), plank = Math.max(30, Math.round(st.dur.value * 0.5 / 5) * 5);
     const kicks = Math.max(10, Math.round(st.spd.value * 0.8)), burp = Math.max(5, Math.round(st.end.value / 5));
     return { title: 'Red Gate', text: 'The boss of the cycle. Every stat gets tested in one session. Rest only between rounds.', objectives: [
       { id: 'circuit', text: '5 rounds: ' + push + ' push-ups, ' + fmtTime(plank) + ' plank, 30 s of kicks (aim for ' + kicks + '), ' + burp + ' burpees. 2 min rest between rounds.', target: 5, unit: 'rounds', step: [1], guides: ['pushup', 'plank', 'roundhouse', 'burpee'] },
@@ -211,9 +244,16 @@
   function awakening(data) {
     const p = data.profile || {}, vals = {};
     const q = p.startDate ? (data.quests || {})[BB.weekStart(p.startDate)] : null;
-    if (q && q.type === 'trial') TEST_KEYS.forEach((k) => { if (typeof q.progress[k] === 'number') vals[k] = q.progress[k]; });
+    if (q && q.type === 'trial') Object.assign(vals, testValues(q.progress));
     const tests = ((data.ranks || {}).tests || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    TEST_KEYS.forEach((k) => { if (vals[k] == null) { const t = tests.find((x) => typeof x[k] === 'number'); if (t) vals[k] = t[k]; } });
+    TEST_KEYS.forEach((k) => {
+      if (vals[k] != null) return;
+      const t = tests.find((x) => typeof x[k] === 'number');
+      if (!t) return;
+      const v = testValues(t);
+      vals[k] = v[k];
+      if (k === 'str') vals.strFrom = v.strFrom;
+    });
     return { values: vals, date: (q && q.clearedAt) || (tests[0] && tests[0].date) || null };
   }
   // Awakening first, then every month that has at least one result.
@@ -223,13 +263,13 @@
     const bench = (data.ranks || {}).bench || {};
     Object.keys(bench).map(Number).sort((x, y) => x - y).forEach((m) => {
       const b = bench[m];
-      if (b && b.progress && Object.keys(b.progress).length) out.push({ month: m, label: 'Month ' + m, date: b.doneAt || null, values: b.progress, done: !!b.done });
+      if (b && b.progress && Object.keys(b.progress).length) out.push({ month: m, label: 'Month ' + m, date: b.doneAt || null, values: testValues(b.progress), done: !!b.done });
     });
     return out;
   }
 
   // ---------- Pasted results: "push-ups 18, plank 1:40, kicks 27, burpees 31" ----------
-  const PASTE = /(push[\s-]?ups?|press[\s-]?ups?|\bstr\b|strength|planks?|\bdur\b|durability|kicks?|roundhouses?|\bspd\b|speed|burpees?|\bend\b|endurance)/gi;
+  const PASTE = /(knee[\s-]*push[\s-]?ups?|push[\s-]?ups?|press[\s-]?ups?|\bstr\b|strength|planks?|\bdur\b|durability|kicks?|roundhouses?|\bspd\b|speed|burpees?|\bend\b|endurance)/gi;
   function pasteKey(w) {
     w = w.toLowerCase();
     return /push|press|str/.test(w) ? 'str' : /plank|dur/.test(w) ? 'dur' : /kick|round|spd|speed/.test(w) ? 'spd' : 'end';
@@ -249,7 +289,7 @@
     const s = String(text || ''), hits = [];
     let m;
     PASTE.lastIndex = 0;
-    while ((m = PASTE.exec(s))) hits.push({ k: pasteKey(m[1]), at: m.index, end: m.index + m[1].length });
+    while ((m = PASTE.exec(s))) hits.push({ k: pasteKey(m[1]), at: m.index, end: m.index + m[1].length, knee: /^knee/i.test(m[1]) });
     const numberFirst = hits.length > 0 && /\d/.test(s.slice(0, hits[0].at));
     const drop = (x) => x.replace(/\(?\s*(?:in\s+)?(?:30\s*s(?:ec\w*)?|3\s*min\w*)\s*\)?/gi, ' ');
     const out = {};
@@ -259,7 +299,7 @@
       let v;
       if (h.k === 'dur') v = parseTime(seg, numberFirst);
       else { const nums = drop(seg).match(/\d{1,3}/g); v = nums ? Number(nums[numberFirst ? nums.length - 1 : 0]) : null; }
-      if (v != null && isFinite(v)) out[h.k] = v;
+      if (v != null && isFinite(v)) { out[h.k] = v; if (h.knee) out.strStyle = 'knee'; }
     });
     return out;
   }
@@ -273,6 +313,7 @@
     RANKS, rankName, rankIdx, tierOf, TESTS, TEST_KEYS, STAT_KEYS, STAT_INFO, DEFAULT_ESTIMATES, POT_BASE, TECHNIQUES,
     indexFor, bestTests, willpower, questClears, statState, nextTechnique, weekNo, makeQuest, objectiveDone, questDone, fmtTime,
     ARC_WEEKS, benchMonthOf, benchWeekStart, benchDue, awakening, benchHistory, parseTrialText,
+    PUSH_LOAD, REF_KG, pressKg, repsFor, strOf, testValues, pushText, strText,
   };
   root.RK = RK;
   if (typeof module !== 'undefined' && module.exports) module.exports = RK;

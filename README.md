@@ -59,6 +59,12 @@ Edit a file on GitHub (pencil, then Commit), or clone the repo with git. The sit
 
 **Stat ranks (ranks.js):** 21 steps from F- to S+. C is roughly average for his age, A is athletic, S is elite.
 - STR is max push-ups, DUR is max plank, SPD is roundhouse kicks in 30 seconds, and END is burpees in 3 minutes. Each keeps his best trial result.
+- STR is scored as estimated pressing strength in kg, not as a push-up count (his request, 2026-10-16: at 104 kg every push-up lifts far more than a light person's).
+  - Each rep lifts about 64% of body weight for a full push-up and 49% for a knee push-up, using his weight on the test day. An Epley one-rep max is estimated from that load and the reps.
+  - Either style counts. Each result stores `strReps`, `strStyle` and `strBw` next to the kg.
+  - The kg thresholds are the old push-up thresholds for a 75 kg body, so at 75 kg nothing changes. Losing weight alone never raises STR.
+  - Results saved before this change were full push-ups and are ranked as if done at 75 kg.
+  - DUR, SPD and END stay as raw numbers on purpose. He wants those to improve on their own, not through a weight correction.
 - TEC is a 20-technique checklist, one rank step per technique.
 - WIL comes from the last 28 days of logs (60% eating, 40% training), so it can drop.
 - POT starts at A and rises one step per 4 weekly quests cleared.

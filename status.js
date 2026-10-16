@@ -24,6 +24,8 @@ function weekLabel() { const n = questWeek(); return 'Week ' + n + (n <= RK.ARC_
 const focusCode = (q) => (q.focus === 'gate' ? 'ALL' : RK.STAT_INFO[q.focus].code);
 const fmtTest = (k, v) => (k === 'dur' ? RK.fmtTime(v) : String(v));
 const testUnit = (k) => (k === 'dur' ? '' : ' ' + RK.TESTS[k].unit);
+// A saved result: strength is kg pressed, shown to the whole kilo.
+const fmtVal = (k, v) => (k === 'str' ? String(Math.round(v)) : fmtTest(k, v));
 
 function questTeaser() {
   const q = currentQuest();
@@ -43,6 +45,7 @@ function statSub(k, s) {
   const t = RK.TESTS[k];
   if (t) {
     if (s.source === 'estimate') return 'Your estimate. The rank trial confirms it.';
+    if (k === 'str') return 'Best ' + RK.strText(s.from) + (s.next ? ' · ' + s.next.rank + ' at ' + (s.next.reps ? s.next.reps + (s.from.style === 'knee' ? ' knee' : '') : Math.round(s.next.need) + ' kg') : ' · top rank');
     return 'Best: ' + s.value + ' ' + t.unit + (s.next ? ' · ' + s.next.rank + ' at ' + s.next.need : ' · top rank');
   }
   if (k === 'tec') return s.source === 'estimate' ? 'Your estimate. Tick your techniques below to confirm it.' : s.value + ' of 20 techniques mastered';
@@ -205,14 +208,27 @@ function setTrialValue(k, v) {
   S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { [k]: String(v) });
   document.querySelectorAll('.trial [name="' + k + '"]').forEach((i) => { i.value = String(v); });
 }
+// The push-up test is scored at your current weight, in the style you pick: full push-ups, or knee push-ups while you are on those.
+function trialBw() { return weightAt(today()) || (S.data.profile || {}).startWeight || RK.REF_KG; }
+function strStyleDefault() { return Object.assign({}, BB.DEFAULT_LEVELS, (S.data.profile || {}).levels).push <= 2 ? 'knee' : 'full'; }
+function strStyleCtl(prefill) {
+  const draft = S.ui.trialDraft || {}, style = draft.strStyle || (prefill && prefill.strStyle) || strStyleDefault(), bw = trialBw();
+  return '<div class="chips" data-group="strstyle">' + [['full', 'Full push-ups'], ['knee', 'Knee push-ups']].map((o) =>
+    '<button type="button" class="chip' + (style === o[0] ? ' on' : '') + '" data-act="str-style" data-v="' + o[0] + '" aria-pressed="' + (style === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
+    '<p class="small muted">At ' + fmtKg(bw) + ' kg, each full push-up lifts about ' + Math.round(RK.PUSH_LOAD.full * bw) + ' kg and each knee push-up about ' + Math.round(RK.PUSH_LOAD.knee * bw) + ' kg.</p>';
+}
+ACTIONS['str-style'] = (el) => {
+  S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { strStyle: el.dataset.v });
+  document.querySelectorAll('.trial [data-group="strstyle"] .chip').forEach((c) => { const on = c.dataset.v === el.dataset.v; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
+};
 function trialForm(prefill, where, month) {
   const draft = S.ui.trialDraft || {};
   return '<form data-form="trial" data-where="' + where + '"' + (month ? ' data-m="' + month + '"' : '') + ' class="trial">' + RK.TEST_KEYS.map((k) => {
     const t = RK.TESTS[k];
-    const v = draft[k] != null ? draft[k] : prefill && typeof prefill[k] === 'number' ? fmtTest(k, prefill[k]) : '';
+    const v = draft[k] != null ? draft[k] : prefill && typeof prefill[k] === 'number' ? (k === 'str' ? String(RK.strOf(prefill).reps) : fmtTest(k, prefill[k])) : '';
     const id = 'tr-' + where + '-' + k; // one id per form: the quest, benchmark and sheet forms can be on screen together
     return '<div class="field trial-test"><div class="tt-head"><label for="' + id + '">' + RK.STAT_INFO[k].code + ' · ' + t.test + (t.unit === 's' ? ' (m:ss or seconds)' : '') + '</label>' + howBtn(t.guide, 'How to') + '</div>' +
-      '<p class="small">' + t.how + '</p>' + timerCtl(k) +
+      '<p class="small">' + t.how + '</p>' + timerCtl(k) + (k === 'str' ? strStyleCtl(prefill) : '') +
       '<input class="input" id="' + id + '" name="' + k + '" inputmode="' + (t.unit === 's' ? 'text' : 'numeric') + '" autocomplete="off" value="' + esc(v) + '" placeholder="' + (t.unit === 's' ? 'e.g. 1:25' : 'e.g. 20') + '"></div>';
   }).join('') +
     '<details class="paste"><summary>Paste your results instead</summary><textarea class="input" id="tr-' + where + '-paste" name="paste" aria-label="Paste your results" placeholder="push-ups 18, plank 1:40, kicks 27, burpees 31"></textarea>' +
@@ -230,6 +246,7 @@ ACTIONS['tr-paste'] = (el) => {
   const keys = RK.TEST_KEYS.filter((k) => got[k] != null);
   if (!keys.length) { toast('No results found. Try: push-ups 18, plank 1:40, kicks 27, burpees 31'); return; }
   keys.forEach((k) => setTrialValue(k, fmtTest(k, got[k])));
+  if (got.strStyle) ACTIONS['str-style']({ dataset: { v: got.strStyle } });
   toast('Filled in ' + keys.map((k) => RK.STAT_INFO[k].code).join(', ') + '. Check them, then save.');
 };
 ACTIONS['tt-start'] = (el) => {
@@ -269,6 +286,12 @@ FORMS.trial = (f) => {
     if (v != null) res[k] = v;
   }
   if (Object.keys(res).length === 1) { toast('Enter at least one result.'); return; }
+  if (res.str != null) {
+    const on = f.querySelector('[data-group="strstyle"] .chip.on'), style = on ? on.dataset.v : (S.ui.trialDraft || {}).strStyle || strStyleDefault();
+    const bw = Math.round(trialBw() * 10) / 10;
+    Object.assign(res, { str: RK.pressKg(res.str, style, bw), strReps: res.str, strStyle: style, strBw: bw });
+  }
+  const keep = (to) => { RK.TEST_KEYS.forEach((k) => { if (res[k] != null) to[k] = res[k]; }); if (res.str != null) ['strReps', 'strStyle', 'strBw'].forEach((k) => { to[k] = res[k]; }); };
   const before = stats();
   const q = currentQuest();
   const forQuest = where !== 'bench' && q && q.type === 'trial' && !q.cleared;
@@ -279,7 +302,7 @@ FORMS.trial = (f) => {
     const bench = Object.assign({}, S.data.ranks.bench);
     const rec = Object.assign({ progress: {} }, bench[month]);
     rec.progress = Object.assign({}, rec.progress);
-    RK.TEST_KEYS.forEach((k) => { if (res[k] != null) rec.progress[k] = res[k]; });
+    keep(rec.progress);
     if (!rec.done && RK.TEST_KEYS.every((k) => typeof rec.progress[k] === 'number')) { rec.done = true; rec.doneAt = today(); logTestSession(month); report = month; }
     bench[month] = rec;
     S.data.ranks.bench = bench;
@@ -288,7 +311,7 @@ FORMS.trial = (f) => {
   S.ui.trialDraft = null; S.ui.tt = null;
   closeSheet();
   if (forQuest) {
-    RK.TEST_KEYS.forEach((k) => { if (res[k] != null) q.progress[k] = res[k]; });
+    keep(q.progress);
     if (RK.questDone(q)) { q.cleared = true; q.clearedAt = today(); logQuestSession(q); }
     save('quests');
   }
@@ -305,7 +328,12 @@ function logTestSession(month) {
 function trialHistory() {
   const tests = ((S.data.ranks || {}).tests || []).slice().reverse();
   if (!tests.length) return '';
-  const cell = (t, k) => (typeof t[k] === 'number' ? fmtTest(k, t[k]) : '–');
+  const cell = (t, k) => {
+    if (typeof t[k] !== 'number') return '–';
+    if (k !== 'str') return fmtTest(k, t[k]);
+    const s = RK.strOf(t);
+    return Math.round(s.kg) + ' kg<br><span class="muted">' + s.reps + (s.style === 'knee' ? ' knee' : '') + '</span>';
+  };
   return '<div class="card"><h2>Trial history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>STR</th><th>DUR</th><th>SPD</th><th>END</th></tr></thead><tbody>' +
     tests.map((t) => '<tr><td>' + BB.niceDate(t.date) + (t.tag ? '<br><span class="muted">' + (t.tag === 'awakening' ? 'Awakening' : 'Month ' + t.tag.slice(6)) + '</span>' : '') + '</td>' +
       RK.TEST_KEYS.map((k) => '<td>' + cell(t, k) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div></div>';
@@ -333,7 +361,10 @@ function weightAt(date) {
   const s = BB.trendSeries(S.data.weights).filter((x) => !date || x.date <= date);
   return s.length ? s[s.length - 1].trend : null;
 }
-const signed = (v, k) => (v > 0 ? '+' : v < 0 ? '−' : '±') + (k === 'dur' ? RK.fmtTime(Math.abs(v)) : Math.abs(v));
+function signed(v, k) {
+  if (k === 'str') v = Math.round(v);
+  return (v > 0 ? '+' : v < 0 ? '−' : '±') + (k === 'dur' ? RK.fmtTime(Math.abs(v)) : Math.abs(v)) + (k === 'str' ? ' kg' : '');
+}
 function benchReport(m, before) {
   const H = RK.benchHistory(S.data), base = H[0], now = H.find((h) => h.month === m);
   const prev = H.filter((h) => h.month > 0 && h.month < m).pop();
@@ -342,8 +373,9 @@ function benchReport(m, before) {
     const a = base && base !== now ? base.values[k] : null, b = now ? now.values[k] : null;
     if (b == null) return '';
     const th = RK.TESTS[k].th, ra = a == null ? null : RK.indexFor(th, a), rb = RK.indexFor(th, b);
-    const sub = a == null ? 'No Awakening result to compare' : signed(b - a, k) + ' since the Awakening' + (prev && prev.values[k] != null ? ' · ' + signed(b - prev.values[k], k) + ' since month ' + prev.month : '');
-    return '<div class="sys-row"><span class="sys-code">' + RK.STAT_INFO[k].code + '</span><span class="sys-name">' + (a == null ? '' : fmtTest(k, a) + ' → ') + fmtTest(k, b) + testUnit(k) +
+    const sub = (k === 'str' ? RK.pushText(now.values.strFrom) + ' · ' : '') +
+      (a == null ? 'No Awakening result to compare' : signed(b - a, k) + ' since the Awakening' + (prev && prev.values[k] != null ? ' · ' + signed(b - prev.values[k], k) + ' since month ' + prev.month : ''));
+    return '<div class="sys-row"><span class="sys-code">' + RK.STAT_INFO[k].code + '</span><span class="sys-name">' + (a == null ? '' : fmtVal(k, a) + ' → ') + fmtVal(k, b) + testUnit(k) +
       '<small>' + sub + '</small></span><span class="rank-move">' + (ra == null || ra === rb ? '' : rankBadge(ra) + '<i>→</i>') + rankBadge(rb) + '</span></div>';
   }).join('');
   const gains = RK.TEST_KEYS.filter((k) => base && now && base !== now && base.values[k] > 0 && now.values[k] != null).map((k) => ({ k, g: (now.values[k] - base.values[k]) / base.values[k] }));
@@ -375,7 +407,7 @@ function progressCard() {
   const head = '<tr><th>Test</th>' + H.map((h) => '<th>' + esc(h.month ? 'M' + h.month : 'Start') + '</th>').join('') + '<th>Change</th></tr>';
   const rows = RK.TEST_KEYS.map((k) => {
     const a = H[0].values[k], b = last.values[k];
-    return '<tr><td>' + RK.STAT_INFO[k].code + '</td>' + H.map((h) => '<td>' + (h.values[k] == null ? '–' : fmtTest(k, h.values[k])) + '</td>').join('') +
+    return '<tr><td>' + RK.STAT_INFO[k].code + (k === 'str' ? ' kg' : '') + '</td>' + H.map((h) => '<td>' + (h.values[k] == null ? '–' : fmtVal(k, h.values[k])) + '</td>').join('') +
       '<td>' + (a == null || b == null ? '–' : signed(b - a, k)) + '</td></tr>';
   }).join('');
   const wRow = '<tr><td>KG</td>' + H.map((h, i) => '<td>' + fmtKg(i === 0 ? S.data.profile.startWeight : weightAt(h.date)) + '</td>').join('') + '<td></td></tr>';
