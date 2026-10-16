@@ -24,8 +24,8 @@ function weekLabel() { const n = questWeek(); return 'Week ' + n + (n <= RK.ARC_
 const focusCode = (q) => (q.focus === 'gate' ? 'ALL' : RK.STAT_INFO[q.focus].code);
 const fmtTest = (k, v) => (k === 'dur' ? RK.fmtTime(v) : String(v));
 const testUnit = (k) => (k === 'dur' ? '' : ' ' + RK.TESTS[k].unit);
-// A saved result: strength is kg pressed, shown to the whole kilo.
-const fmtVal = (k, v) => (k === 'str' ? String(Math.round(v)) : fmtTest(k, v));
+// A saved result: strength is push-ups at 75 kg, to one decimal.
+const fmtVal = (k, v) => (k === 'str' ? String(Math.round(v * 10) / 10) : fmtTest(k, v));
 
 function questTeaser() {
   const q = currentQuest();
@@ -45,8 +45,8 @@ function statSub(k, s) {
   const t = RK.TESTS[k];
   if (t) {
     if (s.source === 'estimate') return 'Your estimate. The rank trial confirms it.';
-    if (k === 'str') return 'Best ' + RK.strText(s.from) + (s.next ? ' · ' + s.next.rank + ' at ' + (s.next.reps ? s.next.reps + (s.from.style === 'knee' ? ' knee' : '') : Math.round(s.next.need) + ' kg') : ' · top rank');
-    return 'Best: ' + s.value + ' ' + t.unit + (s.next ? ' · ' + s.next.rank + ' at ' + s.next.need : ' · top rank');
+    if (k === 'str') return 'Best: ' + RK.strText(s.from) + (s.next ? ' · ' + s.next.rank + ' at ' + (s.next.reps ? s.next.reps + (s.from.style === 'knee' ? ' knee' : '') : s.next.need) : ' · your peak. Ask Claude for SS');
+    return 'Best: ' + s.value + ' ' + t.unit + (s.next ? ' · ' + s.next.rank + ' at ' + s.next.need : ' · your peak. Ask Claude for SS');
   }
   if (k === 'tec') return s.source === 'estimate' ? 'Your estimate. Tick your techniques below to confirm it.' : s.value + ' of 20 techniques mastered';
   if (k === 'wil') return s.source === 'measuring' ? 'Ranks after 7 days of logs (day ' + s.days + ')' : Math.round(s.eat * 100) + '% good eating days, ' + Math.round(s.train * 100) + '% of workouts, last 28 days';
@@ -67,7 +67,7 @@ function statusWindow(st) {
       rankBar(s.index) + '<span class="qs-sub">' + esc(statSub(k, s)) + '</span></div>';
   }).join('');
   return '<div class="sys qs"><div class="sys-head"><span>Status</span><span>Overall <b class="qs-overall ' + tierClass(st.overall) + '">' + RK.rankName(st.overall) + '</b></span></div>' + rows +
-    '<p class="sys-note">C is average for your age, A is athletic, S is elite. Trial ranks keep your best result. Willpower is the one that can drop.</p>' +
+    '<p class="sys-note">C is average for your age and A is athletic. S+ is the peak Claude projected for you. Trial ranks keep your best result. Willpower is the one that can drop.</p>' +
     '<button class="btn sys-btn" type="button" data-act="trial">Take a rank trial</button></div>';
 }
 
@@ -215,7 +215,7 @@ function strStyleCtl(prefill) {
   const draft = S.ui.trialDraft || {}, style = draft.strStyle || (prefill && prefill.strStyle) || strStyleDefault(), bw = trialBw();
   return '<div class="chips" data-group="strstyle">' + [['full', 'Full push-ups'], ['knee', 'Knee push-ups']].map((o) =>
     '<button type="button" class="chip' + (style === o[0] ? ' on' : '') + '" data-act="str-style" data-v="' + o[0] + '" aria-pressed="' + (style === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
-    '<p class="small muted">At ' + fmtKg(bw) + ' kg, each full push-up lifts about ' + Math.round(RK.PUSH_LOAD.full * bw) + ' kg and each knee push-up about ' + Math.round(RK.PUSH_LOAD.knee * bw) + ' kg.</p>';
+    '<p class="small muted">At ' + fmtKg(bw) + ' kg, each full push-up lifts about ' + Math.round(RK.PUSH_LOAD.full * bw) + ' kg and each knee push-up about ' + Math.round(RK.PUSH_LOAD.knee * bw) + ' kg. Your reps count as the full push-ups at ' + RK.REF_KG + ' kg that take the same strength.</p>';
 }
 ACTIONS['str-style'] = (el) => {
   S.ui.trialDraft = Object.assign({}, S.ui.trialDraft, { strStyle: el.dataset.v });
@@ -289,7 +289,7 @@ FORMS.trial = (f) => {
   if (res.str != null) {
     const on = f.querySelector('[data-group="strstyle"] .chip.on'), style = on ? on.dataset.v : (S.ui.trialDraft || {}).strStyle || strStyleDefault();
     const bw = Math.round(trialBw() * 10) / 10;
-    Object.assign(res, { str: RK.pressKg(res.str, style, bw), strReps: res.str, strStyle: style, strBw: bw });
+    Object.assign(res, { str: RK.pushEq(res.str, style, bw), strReps: res.str, strStyle: style, strBw: bw });
   }
   const keep = (to) => { RK.TEST_KEYS.forEach((k) => { if (res[k] != null) to[k] = res[k]; }); if (res.str != null) ['strReps', 'strStyle', 'strBw'].forEach((k) => { to[k] = res[k]; }); };
   const before = stats();
@@ -332,7 +332,7 @@ function trialHistory() {
     if (typeof t[k] !== 'number') return '–';
     if (k !== 'str') return fmtTest(k, t[k]);
     const s = RK.strOf(t);
-    return Math.round(s.kg) + ' kg<br><span class="muted">' + s.reps + (s.style === 'knee' ? ' knee' : '') + '</span>';
+    return s.eq + (s.bw ? '<br><span class="muted">' + s.reps + (s.style === 'knee' ? ' knee' : '') + ' at ' + fmtKg(s.bw) + '</span>' : '');
   };
   return '<div class="card"><h2>Trial history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>STR</th><th>DUR</th><th>SPD</th><th>END</th></tr></thead><tbody>' +
     tests.map((t) => '<tr><td>' + BB.niceDate(t.date) + (t.tag ? '<br><span class="muted">' + (t.tag === 'awakening' ? 'Awakening' : 'Month ' + t.tag.slice(6)) + '</span>' : '') + '</td>' +
@@ -362,8 +362,8 @@ function weightAt(date) {
   return s.length ? s[s.length - 1].trend : null;
 }
 function signed(v, k) {
-  if (k === 'str') v = Math.round(v);
-  return (v > 0 ? '+' : v < 0 ? '−' : '±') + (k === 'dur' ? RK.fmtTime(Math.abs(v)) : Math.abs(v)) + (k === 'str' ? ' kg' : '');
+  if (k === 'str') v = Math.round(v * 10) / 10;
+  return (v > 0 ? '+' : v < 0 ? '−' : '±') + (k === 'dur' ? RK.fmtTime(Math.abs(v)) : Math.abs(v));
 }
 function benchReport(m, before) {
   const H = RK.benchHistory(S.data), base = H[0], now = H.find((h) => h.month === m);
@@ -407,13 +407,13 @@ function progressCard() {
   const head = '<tr><th>Test</th>' + H.map((h) => '<th>' + esc(h.month ? 'M' + h.month : 'Start') + '</th>').join('') + '<th>Change</th></tr>';
   const rows = RK.TEST_KEYS.map((k) => {
     const a = H[0].values[k], b = last.values[k];
-    return '<tr><td>' + RK.STAT_INFO[k].code + (k === 'str' ? ' kg' : '') + '</td>' + H.map((h) => '<td>' + (h.values[k] == null ? '–' : fmtVal(k, h.values[k])) + '</td>').join('') +
+    return '<tr><td>' + RK.STAT_INFO[k].code + '</td>' + H.map((h) => '<td>' + (h.values[k] == null ? '–' : fmtVal(k, h.values[k])) + '</td>').join('') +
       '<td>' + (a == null || b == null ? '–' : signed(b - a, k)) + '</td></tr>';
   }).join('');
   const wRow = '<tr><td>KG</td>' + H.map((h, i) => '<td>' + fmtKg(i === 0 ? S.data.profile.startWeight : weightAt(h.date)) + '</td>').join('') + '<td></td></tr>';
   return '<div class="card"><div class="card-head"><h2>How far you\'ve come</h2>' + (last.done && last.month ? '<button class="linkish" type="button" data-act="bench-report" data-m="' + last.month + '">Month ' + last.month + ' report</button>' : '') + '</div>' +
     '<div class="table-wrap"><table><thead>' + head + '</thead><tbody>' + rows + wRow + '</tbody></table></div>' +
-    '<p class="small muted">Start is your Awakening. Each month column is that month\'s benchmark.</p></div>';
+    '<p class="small muted">Start is your Awakening. Each month column is that month\'s benchmark. STR is counted as full push-ups at ' + RK.REF_KG + ' kg.</p></div>';
 }
 
 // ---------- Techniques ----------

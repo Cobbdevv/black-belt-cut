@@ -57,14 +57,22 @@ Edit a file on GitHub (pencil, then Commit), or clone the repo with git. The sit
 - **Food:** he eats what his mother cooks, refuses salads and won't count calories, so the app uses plate and hand-portion rules plus daily habit checkboxes.
 - **Failure modes he described:** he can't stop eating, he stops at random, and he loses motivation. Every feature targets one of these: the craving timer, streaks that allow one missed day, the comeback card, the 15-minute short workout (warm-up included), the extra rule offered after a 2-week stall, belts and ranks.
 
-**Stat ranks (ranks.js):** 21 steps from F- to S+. C is roughly average for his age, A is athletic, S is elite.
-- STR is max push-ups, DUR is max plank, SPD is roundhouse kicks in 30 seconds, and END is burpees in 3 minutes. Each keeps his best trial result.
-- STR is scored as estimated pressing strength in kg, not as a push-up count (his request, 2026-10-16: at 104 kg every push-up lifts far more than a light person's).
-  - Each rep lifts about 64% of body weight for a full push-up and 49% for a knee push-up, using his weight on the test day. An Epley one-rep max is estimated from that load and the reps.
-  - Either style counts. Each result stores `strReps`, `strStyle` and `strBw` next to the kg.
-  - The kg thresholds are the old push-up thresholds for a 75 kg body, so at 75 kg nothing changes. Losing weight alone never raises STR.
-  - Results saved before this change were full push-ups and are ranked as if done at 75 kg.
-  - DUR, SPD and END stay as raw numbers on purpose. He wants those to improve on their own, not through a weight correction.
+**Stat ranks (ranks.js):** 21 steps from F- to S+.
+- **Scale:** up to A- the test scales are population-based (C is roughly average for his age, A is athletic). Above A- each scale bends to his own projected peak, which is S+, and the steps get smaller near the top.
+- **His request (2026-10-16):** "S+ should be MY peak." The peaks are Claude's projection for him at about 75 kg, after a few years of steady training (`RK.PEAKS`):
+  - 60 full push-ups at 75 kg
+  - a 5:00 plank
+  - 54 kicks in 30 seconds
+  - 70 burpees in 3 minutes
+- **Past S+:** reaching S+ means he has hit that projected peak. If he keeps growing, the plan is to add tiers above S+, named in his order: SS, SSS, SR, SSR, and so on. The Status tab and the Claude log both flag a test stat that reaches S+.
+- **The tests:** STR is max push-ups, DUR is max plank, SPD is roundhouse kicks in 30 seconds, and END is burpees in 3 minutes. Each keeps his best trial result.
+- **STR counts body weight:** his request, 2026-10-16, because at 104 kg every push-up lifts far more than a light person's.
+  - A full push-up lifts about 64% of body weight and a knee push-up about 49%, at his weight on the test day.
+  - From that load and the reps, an Epley one-rep max gives the score: the full push-ups at 75 kg that take the same strength. So at 75 kg, full push-ups count as themselves. Losing weight alone never raises STR.
+  - Either style counts. Each result stores `strReps`, `strStyle` and `strBw`, and the score is recomputed from them on read.
+  - For a few hours on 2026-10-16 the app showed STR as kg pressed. That was dropped because every one-rep-max formula is unreliable at high reps; Mayhew's formula, for example, would have put his peak at 12 full push-ups at 104 kg.
+  - Results without `strStyle` are plain counts and count as full push-ups at 75 kg.
+- **DUR, SPD and END stay raw on purpose:** he wants those to improve by themselves, not through a weight correction.
 - TEC is a 20-technique checklist, one rank step per technique.
 - WIL comes from the last 28 days of logs (60% eating, 40% training), so it can drop.
 - POT starts at A and rises one step per 4 weekly quests cleared.

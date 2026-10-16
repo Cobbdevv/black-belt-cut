@@ -8,30 +8,48 @@
   const rankIdx = (name) => Math.max(0, RANKS.indexOf(name));
   const tierOf = (i) => rankName(i)[0];
 
-  // Strength is pressing strength in kg, not a push-up count, so a heavy body gets credit for the weight it lifts and losing weight alone never raises it.
-  // A full push-up lifts about 64% of your body weight and a knee push-up about 49%; reps to failure estimate your one-rep max (Epley).
-  // The rank scale is the push-up scale for a 75 kg body: at 75 kg, full push-ups rank exactly as the raw count would.
+  // Strength counts the weight you push, not just the reps, so a heavy body gets credit for the load it lifts and losing weight alone never raises it.
+  // A full push-up lifts about 64% of your body weight and a knee push-up about 49%. Your reps at that load give a one-rep max (Epley), and the
+  // result is the full push-ups at 75 kg that take the same strength. At 75 kg, full push-ups count as themselves.
   const PUSH_LOAD = { full: 0.64, knee: 0.49 };
   const REF_KG = 75;
-  const PUSH_TH = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38, 42, 48, 55, 62, 72];
   const loadOf = (style, bw) => PUSH_LOAD[style === 'knee' ? 'knee' : 'full'] * (bw || REF_KG);
-  function pressKg(reps, style, bw) { return reps > 0 ? Math.round(loadOf(style, bw) * (1 + reps / 30) * 10) / 10 : 0; }
-  function repsFor(kg, style, bw) { return Math.max(1, Math.ceil(30 * (kg / loadOf(style, bw) - 1) - 1e-9)); }
+  function pushEq(reps, style, bw) {
+    return reps > 0 ? Math.max(0, Math.round(30 * (loadOf(style, bw) * (1 + reps / 30) / loadOf('full', REF_KG) - 1) * 10) / 10) : 0;
+  }
+  // The fewest push-ups of one style at one weight that count for at least this many at 75 kg.
+  function repsFor(eq, style, bw) {
+    let n = Math.max(1, Math.ceil(30 * (loadOf('full', REF_KG) * (1 + eq / 30) / loadOf(style, bw) - 1)));
+    while (n > 1 && pushEq(n - 1, style, bw) >= eq) n--;
+    while (pushEq(n, style, bw) < eq) n++;
+    return n;
+  }
 
-  // Thresholds: the minimum result for each of the 21 ranks. C is roughly average for an 18-25-year-old man, A is athletic, S is elite.
+  // Thresholds: the minimum result for each of the 21 ranks. Up to A- they are population-based: C is roughly average for an
+  // 18-25-year-old man, A is athletic. Above that the scale is his own: S+ is the peak Claude projected for him on 2026-10-16,
+  // and the steps shrink on the way up, because every gain gets harder near your peak. Reaching S+ means a new peak: ranks above it come next.
+  const PEAKS = { str: 60, dur: 300, spd: 54, end: 70 };
+  const TOP_GAPS = [0.24, 0.22, 0.2, 0.18, 0.16];
+  function toPeak(pop, peak, step) {
+    const out = pop.slice(0, 16), from = pop[15];
+    let v = from;
+    TOP_GAPS.forEach((g) => { v += g * (peak - from); out.push(Math.round(v / step) * step); });
+    return out;
+  }
+  const PUSH_TH = toPeak([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38], PEAKS.str, 1);
   const TESTS = {
-    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'kg press', guide: 'pushup',
-      how: 'Full push-ups if you can do 5 or more, otherwise on your knees. One set, no rest at the top. Chest to a fist\'s height from the floor, arms fully straight at the top. Stop when your form breaks. Your body weight turns the reps into kg pressed, so either style counts.',
-      th: PUSH_TH.map((r) => pressKg(r, 'full', REF_KG)) },
+    str: { code: 'STR', name: 'Strength', test: 'Max push-ups', unit: 'push-ups at 75 kg', guide: 'pushup',
+      how: 'Full push-ups if you can do 5 or more, otherwise on your knees. One set, no rest at the top. Chest to a fist\'s height from the floor, arms fully straight at the top. Stop when your form breaks. Your body weight is counted, so either style is fair.',
+      th: PUSH_TH },
     dur: { code: 'DUR', name: 'Durability', test: 'Max plank hold', unit: 's', guide: 'plank',
       how: 'Forearm plank, body in one straight line. Stop the clock when your hips sag or rise. A strong brace is what absorbs hits.',
-      th: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 115, 130, 145, 160, 180, 200, 225, 255, 290, 360] },
+      th: toPeak([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 115, 130, 145, 160, 180], PEAKS.dur, 5) },
     spd: { code: 'SPD', name: 'Speed', test: 'Kicks in 30 seconds', unit: 'kicks', guide: 'roundhouse',
       how: 'Roundhouse kicks to at least waist height, alternating legs, each one retracted back to stance. Count out loud or film it.',
-      th: [0, 6, 10, 14, 17, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 45, 48, 52, 56, 60, 66] },
+      th: toPeak([0, 6, 10, 14, 17, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 45], PEAKS.spd, 1) },
     end: { code: 'END', name: 'Endurance', test: 'Burpees in 3 minutes', unit: 'burpees', guide: 'burpee',
       how: 'Squat, hands down, back to a plank, back up, stand tall. Step back instead of jumping if your knees or wrists need it, but use the same style every trial.',
-      th: [0, 5, 10, 14, 18, 21, 24, 27, 30, 34, 38, 42, 46, 50, 54, 58, 62, 66, 70, 75, 82] },
+      th: toPeak([0, 5, 10, 14, 18, 21, 24, 27, 30, 34, 38, 42, 46, 50, 54, 58], PEAKS.end, 1) },
   };
   const TEST_KEYS = ['str', 'dur', 'spd', 'end'];
   const STAT_KEYS = ['str', 'dur', 'spd', 'end', 'tec', 'wil', 'pot'];
@@ -70,22 +88,23 @@
   ].map((t, i) => ({ i, name: t[0], std: t[1], jump: i >= 16, guide: TECH_GUIDES[i] || null }));
 
   function indexFor(th, v) { let i = 0; for (let k = 0; k < th.length; k++) if (v >= th[k]) i = k; return i; }
-  // One result's strength. New results carry their reps, style and body weight; older ones were full push-ups, ranked as if at 75 kg.
+  // One result's strength. New results carry their reps, style and body weight, and the score is worked out again from those, so a better
+  // formula never leaves old results behind. Older results were plain push-up counts and count as full push-ups at 75 kg.
   function strOf(r) {
     if (!r || typeof r.str !== 'number') return null;
-    if (r.strStyle) return { kg: r.str, reps: r.strReps, style: r.strStyle, bw: r.strBw || null };
-    return { kg: pressKg(r.str, 'full', REF_KG), reps: r.str, style: 'full', bw: null };
+    if (r.strStyle && r.strReps != null) return { eq: pushEq(r.strReps, r.strStyle, r.strBw), reps: r.strReps, style: r.strStyle, bw: r.strBw || null };
+    return { eq: r.str, reps: r.str, style: 'full', bw: null };
   }
-  // The four results of one trial, with strength in kg and its push-ups alongside.
+  // The four results of one trial, with strength as push-ups at 75 kg and the push-ups actually done alongside.
   function testValues(r) {
     const v = {};
     TEST_KEYS.forEach((k) => { if (r && typeof r[k] === 'number') v[k] = r[k]; });
     const s = strOf(r);
-    if (s) { v.str = s.kg; v.strFrom = s; }
+    if (s) { v.str = s.eq; v.strFrom = s; }
     return v;
   }
   const pushText = (s) => s.reps + (s.style === 'knee' ? ' knee' : '') + ' push-ups' + (s.bw ? ' at ' + Math.round(s.bw * 10) / 10 + ' kg' : '');
-  const strText = (s) => '≈' + Math.round(s.kg) + ' kg press (' + pushText(s) + ')';
+  const strText = (s) => pushText(s) + (s.bw && !(s.style === 'full' && s.bw === REF_KG) ? ' = ' + s.eq + ' at ' + REF_KG + ' kg' : '');
   function bestTests(r) {
     const best = {};
     ((r && r.tests) || []).forEach((t) => {
@@ -313,7 +332,7 @@
     RANKS, rankName, rankIdx, tierOf, TESTS, TEST_KEYS, STAT_KEYS, STAT_INFO, DEFAULT_ESTIMATES, POT_BASE, TECHNIQUES,
     indexFor, bestTests, willpower, questClears, statState, nextTechnique, weekNo, makeQuest, objectiveDone, questDone, fmtTime,
     ARC_WEEKS, benchMonthOf, benchWeekStart, benchDue, awakening, benchHistory, parseTrialText,
-    PUSH_LOAD, REF_KG, pressKg, repsFor, strOf, testValues, pushText, strText,
+    PUSH_LOAD, REF_KG, PEAKS, PUSH_TH, pushEq, repsFor, strOf, testValues, pushText, strText,
   };
   root.RK = RK;
   if (typeof module !== 'undefined' && module.exports) module.exports = RK;

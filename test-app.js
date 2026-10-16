@@ -54,6 +54,7 @@ run(`S.ui.tab = 'status'; render();`);
 const sv = view(); clean(sv, 'status');
 assert.match(sv, /qs-row t-C"><span class="qs-name">Strength<\/span><span class="qs-rank">C-</); assert.match(sv, /qs-name">Endurance<\/span><span class="qs-rank">D-</);
 assert.match(sv, /qs-row t-A"><span class="qs-name">Potential<\/span><span class="qs-rank">A</); assert.match(sv, /Ranks after 7 days/);
+assert.match(sv, /S\+ is the peak Claude projected for you/);
 ok('status window shows the estimates, potential A, willpower measuring');
 
 // 3. Awakening Trial through the quest form
@@ -62,11 +63,11 @@ assert.match(view(), /class="chip on" data-act="str-style" data-v="knee"/); // o
 run('FORMS.trial')(form({ '[name="str"]': '15', '[name="dur"]': '1:25', '[name="spd"]': '31', '[name="end"]': '' }, { strstyle: 'knee' }));
 assert.match(sheet(), /Measured below your estimate/); assert.match(sheet(), /Confirmed/); assert.doesNotMatch(sheet(), /END/);
 assert.strictEqual(run('S.data.ranks.tests[0].dur'), 85);
-assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.data.ranks.tests[0])')), { date: run('today()'), str: run(`RK.pressKg(15, 'knee', 101.6)`), strReps: 15, strStyle: 'knee', strBw: 101.6, dur: 85, spd: 31, tag: 'awakening' });
+assert.deepStrictEqual(JSON.parse(run('JSON.stringify(S.data.ranks.tests[0])')), { date: run('today()'), str: 16.7, strReps: 15, strStyle: 'knee', strBw: 101.6, dur: 85, spd: 31, tag: 'awakening' });
 assert.strictEqual(run('currentQuest().progress.strReps'), 15); assert.strictEqual(run('currentQuest().progress.strStyle'), 'knee');
 run(`S.ui.tab = 'status'; render();`);
-assert.match(view(), /Best ≈75 kg press \(15 knee push-ups at 101\.6 kg\) · C- at 17 knee/); clean(view(), 'status after the trial');
-assert.match(view(), /<td>75 kg<br><span class="muted">15 knee<\/span><\/td>/); // trial history
+assert.match(view(), /Best: 15 knee push-ups at 101\.6 kg = 16\.7 at 75 kg · C- at 17 knee/); clean(view(), 'status after the trial');
+assert.match(view(), /<td>16\.7<br><span class="muted">15 knee at 101\.6<\/span><\/td>/); // trial history
 assert.match(view(), /value="15"/); // the quest form shows the push-ups, not the kg
 assert.strictEqual(run('currentQuest().cleared'), false);
 run('FORMS.trial')(form({ '[name="str"]': '', '[name="dur"]': '', '[name="spd"]': '', '[name="end"]': '25' }, {}));
@@ -178,8 +179,13 @@ run(`S.ui.tab = 'today'; render();`); assert.match(view(), /Training log/);
 run('FORMS.note')(form({ '#note-in': 'Slept 6 hours, hungry late at night' }, {}));
 assert.strictEqual(run('S.data.notes[today()][0].text'), 'Slept 6 hours, hungry late at night');
 const log = run('LOGBOOK.text(S.data, { today: today(), days: null })');
-for (const part of ['## About me', '## Where I am now', '## Benchmarks', 'Month 1', 'STR C (best ≈86 kg press (22 knee push-ups at 101.6 kg))', '| Strength from max push-ups | ≈75 kg press (15 knee push-ups at 101.6 kg) | ≈86 kg press', '## Workouts', 'Left knee a bit sore', 'effort Hard', '## Eating rules', '## My notes', 'Slept 6 hours']) assert.ok(log.includes(part), 'log has ' + part);
+for (const part of ['## About me', '## Where I am now', '## Benchmarks', 'Month 1', 'STR C (best: 22 knee push-ups at 101.6 kg = 23.9 at 75 kg)', '| Max push-ups, as push-ups at 75 kg | 15 knee push-ups at 101.6 kg = 16.7 at 75 kg | 22 knee push-ups at 101.6 kg = 23.9 at 75 kg |', '## Workouts', 'Left knee a bit sore', 'effort Hard', '## Eating rules', '## My notes', 'Slept 6 hours']) assert.ok(log.includes(part), 'log has ' + part);
 clean(log, 'log');
+run(`S.data.ranks.tests.push({ date: today(), str: 60, spd: 54 }); S.ui.tab = 'status'; render();`); // the projected peak, reached
+assert.match(view(), /Best: 60 push-ups · your peak\. Ask Claude for SS/); assert.match(view(), /Best: 54 kicks · your peak\. Ask Claude for SS/);
+const peakLog = run('LOGBOOK.text(S.data, { today: today(), days: 7 })');
+assert.ok(peakLog.includes('STR S+ (best: 60 push-ups; projected peak reached, time for SS)') && peakLog.includes('SPD S+ (best 54 kicks; projected peak reached, time for SS)'), 'the log tells Claude a peak was reached');
+run('S.data.ranks.tests.pop()');
 assert.ok(run('LOGBOOK.text(S.data, { today: today(), days: 7 })').length < log.length + 1);
 run(`S.ui.tab = 'progress'; render();`); assert.match(view(), /Copy for Claude/); clean(view(), 'progress');
 run(`S.ui.tab = 'guide'; render();`); assert.match(view(), /Exercise guides/); clean(view(), 'guide');

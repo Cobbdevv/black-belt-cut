@@ -13,26 +13,46 @@ for (const k of RK.TEST_KEYS) {
 assert.strictEqual(RK.TECHNIQUES.length, 20);
 ok('scale, thresholds and technique list are well formed');
 
-const full75 = (r) => RK.pressKg(r, 'full', 75);
 assert.strictEqual(RK.indexFor(RK.TESTS.str.th, 0), 0);
-assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, full75(18))), 'C-');
-assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, full75(20))), 'C-');
-assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, full75(21))), 'C');
+assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, 18)), 'C-');
+assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, 20)), 'C-');
+assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, 21)), 'C');
 assert.strictEqual(RK.rankName(RK.indexFor(RK.TESTS.str.th, 500)), 'S+');
 ok('results map to ranks');
 
-// Strength is kg pressed: push-ups times the share of body weight each one lifts, turned into a one-rep max
-const PUSH_TH = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38, 42, 48, 55, 62, 72];
-for (let r = 0; r <= 80; r++) assert.strictEqual(RK.indexFor(RK.TESTS.str.th, full75(r)), RK.indexFor(PUSH_TH, r), 'at 75 kg, ' + r + ' push-ups rank as before');
-const strRank = (r, style, bw) => RK.rankName(RK.indexFor(RK.TESTS.str.th, RK.pressKg(r, style, bw)));
-assert.strictEqual(RK.pressKg(11, 'knee', 104.3), 69.8); assert.strictEqual(strRank(11, 'knee', 104.3), 'D-');
-assert.strictEqual(RK.pressKg(15, 'knee', 104), 76.4); assert.strictEqual(strRank(15, 'knee', 104), 'D+');
+// Up to A- the scales are population-based; above it they bend to the projected peak, which is S+, with shrinking steps
+const POP = { str: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 21, 24, 27, 30, 34, 38], dur: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 115, 130, 145, 160, 180],
+  spd: [0, 6, 10, 14, 17, 20, 22, 24, 26, 28, 30, 33, 36, 39, 42, 45], end: [0, 5, 10, 14, 18, 21, 24, 27, 30, 34, 38, 42, 46, 50, 54, 58] };
+assert.deepStrictEqual(RK.PEAKS, { str: 60, dur: 300, spd: 54, end: 70 });
+for (const k of RK.TEST_KEYS) {
+  const th = RK.TESTS[k].th;
+  assert.deepStrictEqual(th.slice(0, 16), POP[k], k + ' up to A-');
+  assert.strictEqual(th[20], RK.PEAKS[k], k + ' S+ is the peak');
+  for (let i = 17; i <= 20; i++) assert.ok(th[i] - th[i - 1] <= th[i - 1] - th[i - 2] + 1, k + ' steps shrink toward the peak at ' + i);
+}
+assert.deepStrictEqual(RK.TESTS.dur.th.slice(15), [180, 210, 235, 260, 280, 300]);
+assert.deepStrictEqual(RK.TESTS.str.th.slice(15), [38, 43, 48, 53, 56, 60]);
+ok('the top of every scale ends at the projected peak');
+
+// Strength: push-ups of either style at your weight count as the full push-ups at 75 kg that take the same strength
+for (let r = 0; r <= 80; r++) assert.strictEqual(RK.pushEq(r, 'full', 75), r, 'at 75 kg, ' + r + ' full push-ups count as themselves');
+const strRank = (r, style, bw) => RK.rankName(RK.indexFor(RK.TESTS.str.th, RK.pushEq(r, style, bw)));
+assert.strictEqual(RK.pushEq(11, 'knee', 104.3), 13.7); assert.strictEqual(strRank(11, 'knee', 104.3), 'D-');
+assert.strictEqual(RK.pushEq(15, 'knee', 104.3), 17.9); assert.strictEqual(strRank(15, 'knee', 104.3), 'D+');
 assert.strictEqual(strRank(15, 'full', 70), 'D-'); assert.strictEqual(strRank(30, 'full', 70), 'C+');
-assert.strictEqual(strRank(30, 'full', 75), 'B'); // the raw count would have ranked 30 push-ups B at any weight
-assert.ok(RK.pressKg(15, 'knee', 95) < RK.pressKg(15, 'knee', 104)); // the same reps at a lighter weight press less
-assert.ok(RK.repsFor(76.4, 'knee', 95) > 15); // so losing weight alone never raises strength
-assert.strictEqual(RK.pressKg(0, 'knee', 104), 0);
-ok('strength: push-ups become kg pressed at your weight, and a 75 kg body ranks exactly as before');
+assert.strictEqual(strRank(30, 'full', 75), 'B');
+assert.strictEqual(RK.repsFor(60, 'full', 104.3), 35); // the peak at today's weight is 35 full push-ups, not a handful
+assert.ok(RK.pushEq(15, 'knee', 95) < RK.pushEq(15, 'knee', 104)); // the same reps at a lighter weight count for less
+assert.ok(RK.repsFor(17.9, 'knee', 95) > 15); // so losing weight alone never raises strength
+assert.strictEqual(RK.pushEq(0, 'knee', 104), 0); assert.strictEqual(RK.pushEq(1, 'knee', 50), 0); // never below zero
+for (const style of ['full', 'knee']) for (const bw of [55, 75, 90, 104.3, 130]) {
+  for (let r = 1; r <= 150; r++) assert.ok(RK.pushEq(r, style, bw) >= RK.pushEq(r - 1, style, bw), 'more reps never count for less');
+  for (let i = 1; i <= 20; i++) {
+    const need = RK.TESTS.str.th[i], n = RK.repsFor(need, style, bw);
+    assert.ok(RK.pushEq(n, style, bw) >= need && (n === 1 || RK.pushEq(n - 1, style, bw) < need), style + ' at ' + bw + ' kg reaches rank ' + i + ' at exactly ' + n);
+  }
+}
+ok('strength: your weight is counted, 75 kg full push-ups count as themselves, and the next rank is exact in push-ups');
 
 const today = '2026-10-26';
 const base = () => ({ profile: { startDate: '2026-10-12', levers: [] }, habits: {}, sessions: [], quests: {}, ranks: {} });
@@ -45,22 +65,22 @@ ok('estimates are the starting ranks');
 
 d.ranks.tests = [{ date: '2026-10-13', str: 15, dur: 95 }, { date: '2026-10-20', str: 12, end: 27 }];
 st = RK.statState(d, today);
-assert.strictEqual(st.str.value, full75(15)); assert.strictEqual(RK.rankName(st.str.index), 'D'); // best result counts; older results were full push-ups, ranked as at 75 kg
+assert.strictEqual(st.str.value, 15); assert.strictEqual(RK.rankName(st.str.index), 'D'); // best result counts; older results are full push-ups at 75 kg
 assert.strictEqual(st.str.reps, 15);
 assert.strictEqual(RK.rankName(st.dur.index), 'C-'); assert.strictEqual(RK.rankName(st.end.index), 'D');
-assert.strictEqual(st.str.next.need, full75(16)); assert.ok(st.str.progress > 0 && st.str.progress < 1);
+assert.strictEqual(st.str.next.need, 16); assert.ok(st.str.progress > 0 && st.str.progress < 1);
 ok('trial results replace estimates and keep the best');
 
-d.ranks.tests.push({ date: '2026-10-25', str: RK.pressKg(11, 'knee', 104.3), strReps: 11, strStyle: 'knee', strBw: 104.3 });
+d.ranks.tests.push({ date: '2026-10-25', str: 13.7, strReps: 11, strStyle: 'knee', strBw: 104.3 });
 st = RK.statState(d, today);
-assert.strictEqual(RK.rankName(st.str.index), 'D'); // 11 knee push-ups at 104.3 kg press less than 15 full ones did at 75
-d.ranks.tests = [{ date: '2026-10-25', str: RK.pressKg(11, 'knee', 104.3), strReps: 11, strStyle: 'knee', strBw: 104.3 }];
+assert.strictEqual(RK.rankName(st.str.index), 'D'); // 11 knee push-ups at 104.3 kg count for less than 15 full ones at 75
+d.ranks.tests = [{ date: '2026-10-25', str: 68.1, strReps: 11, strStyle: 'knee', strBw: 104.3 }]; // saved while strength was shown in kg
 st = RK.statState(d, today);
+assert.strictEqual(st.str.value, 13.7); // worked out again from the push-ups, whatever number was saved
 assert.strictEqual(RK.rankName(st.str.index), 'D-'); assert.strictEqual(st.str.reps, 11); assert.strictEqual(st.str.from.style, 'knee');
-assert.strictEqual(RK.strText(st.str.from), '≈70 kg press (11 knee push-ups at 104.3 kg)');
-const nx = st.str.next.reps; // the next rank, in push-ups of the same style at the same weight
-assert.ok(RK.pressKg(nx, 'knee', 104.3) >= st.str.next.need && RK.pressKg(nx - 1, 'knee', 104.3) < st.str.next.need, 'next rank at ' + nx);
-assert.strictEqual(nx, 12);
+assert.strictEqual(RK.strText(st.str.from), '11 knee push-ups at 104.3 kg = 13.7 at 75 kg');
+assert.strictEqual(RK.strText({ eq: 20, reps: 20, style: 'full', bw: 75 }), '20 push-ups at 75 kg');
+assert.strictEqual(st.str.next.reps, 12); // the next rank, in push-ups of the same style at the same weight
 ok('strength trials keep their push-ups, style and weight, and show the next rank in push-ups');
 
 d = base();
@@ -127,10 +147,10 @@ assert.strictEqual(RK.benchDue(d, wk(7)).month, 2);
 d.quests[wk(0)] = Object.assign(RK.makeQuest(d, wk(0), wk(0)), { progress: { str: 15, dur: 85, spd: 29, end: 24 }, cleared: true, clearedAt: '2026-10-13' });
 const h = RK.benchHistory(d);
 assert.deepStrictEqual(h.map((x) => x.label), ['Awakening', 'Month 1']);
-assert.strictEqual(h[0].values.str, full75(15)); assert.strictEqual(h[1].values.str, full75(20)); assert.ok(h[0].done && h[1].done);
+assert.strictEqual(h[0].values.str, 15); assert.strictEqual(h[1].values.str, 20); assert.ok(h[0].done && h[1].done);
 assert.strictEqual(h[0].values.strFrom.reps, 15);
-d.ranks.bench[1].progress = { str: RK.pressKg(14, 'knee', 101), strReps: 14, strStyle: 'knee', strBw: 101, dur: 90, spd: 31, end: 27 };
-assert.strictEqual(RK.benchHistory(d)[1].values.str, RK.pressKg(14, 'knee', 101)); assert.strictEqual(RK.benchHistory(d)[1].values.strFrom.style, 'knee');
+d.ranks.bench[1].progress = { str: RK.pushEq(14, 'knee', 101), strReps: 14, strStyle: 'knee', strBw: 101, dur: 90, spd: 31, end: 27 };
+assert.strictEqual(RK.benchHistory(d)[1].values.str, RK.pushEq(14, 'knee', 101)); assert.strictEqual(RK.benchHistory(d)[1].values.strFrom.style, 'knee');
 ok('benchmarks: due at the end of every 4th week, stay open until done, history starts at the Awakening');
 
 const P = RK.parseTrialText;

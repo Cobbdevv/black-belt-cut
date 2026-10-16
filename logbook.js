@@ -15,9 +15,9 @@
     return RK.STAT_KEYS.map((k) => {
       const s = st[k], code = RK.STAT_INFO[k].code;
       if (s.index == null) return code + ' unranked yet';
-      const rank = RK.rankName(s.index);
-      if (k === 'str' && s.source === 'test') return code + ' ' + rank + ' (best ' + RK.strText(s.from) + ')';
-      if (RK.TESTS[k]) return code + ' ' + rank + (s.source === 'test' ? ' (best ' + test(k, s.value) + (k === 'dur' ? '' : ' ' + RK.TESTS[k].unit) + ')' : ' (my estimate)');
+      const rank = RK.rankName(s.index), peak = s.source === 'test' && s.index === 20 ? '; projected peak reached, time for SS' : '';
+      if (k === 'str' && s.source === 'test') return code + ' ' + rank + ' (best: ' + RK.strText(s.from) + peak + ')';
+      if (RK.TESTS[k]) return code + ' ' + rank + (s.source === 'test' ? ' (best ' + test(k, s.value) + (k === 'dur' ? '' : ' ' + RK.TESTS[k].unit) + peak + ')' : ' (my estimate)');
       if (k === 'tec') return code + ' ' + rank + (s.source === 'checklist' ? ' (' + s.value + ' of 20 techniques)' : ' (my estimate)');
       return code + ' ' + rank;
     }).join(', ') + '. Overall ' + RK.rankName(st.overall) + '.';
@@ -84,7 +84,7 @@
       line('## Benchmarks (all time)');
       line('| Test | ' + H.map((h) => h.label + (h.date ? ' (' + shortDay(h.date) + ')' : '')).join(' | ') + ' |');
       line('|' + ' --- |'.repeat(H.length + 1));
-      RK.TEST_KEYS.forEach((k) => line('| ' + (k === 'str' ? 'Strength from max push-ups' : RK.TESTS[k].test) + ' | ' +
+      RK.TEST_KEYS.forEach((k) => line('| ' + (k === 'str' ? 'Max push-ups, as push-ups at ' + RK.REF_KG + ' kg' : RK.TESTS[k].test) + ' | ' +
         H.map((h) => (k === 'str' && h.values.strFrom ? RK.strText(h.values.strFrom) : test(k, h.values[k]))).join(' | ') + ' |'));
       line();
     }
